@@ -8,17 +8,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mike-unearth/uav.git"
+    "url": "git+https://github.com/unearth-inc/uav.git"
   },
   "keywords": [
     "data",
     "binding",
     "templates"
   ],
-  "author": "mike-unearth",
+  "author": "unearth",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/mike-unearth/uav/issues"
+    "url": "https://github.com/unearth-inc/uav/issues"
   },
-  "homepage": "https://github.com/mike-unearth/uav#readme"
+  "homepage": "https://github.com/unearth-inc/uav#readme"
 }
