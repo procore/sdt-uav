@@ -4,7 +4,7 @@ UAV is a JavaScript utility for templates with one-way data binding. It is 1.6KB
 
 ## Install
 
-`yarn add https://github.com/mike-unearth/uav`
+`npm install uav` or `yarn add uav`
 
 ## Example
 
