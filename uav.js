@@ -158,7 +158,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
      * Parses a template and creates bindings
      * to all values it references
      */
-    function bind(template, vm, replace) {
+    function bind(template, vm, replace, alreadyBound) {
 
         var matches = template.match(/{.*?}/g);
 
@@ -173,7 +173,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
                         var prop = match.substring(1, match.length - 1);
 
-                        if (firstTime) {
+                        if (!binding.bound && !alreadyBound) {
 
                             vm._currentlyCreatingBinding = binding;
                         }
@@ -193,15 +193,16 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
                         } else if (value === undefined || value === '_invalidExpression' || value === null) {
 
                             content = content.replace(match, '');
-                        } else if (type === 'object' && value._element) {
+                        } else if (type === 'object') {
 
-                            content = value._element;
-                        } else {
+                            if (value._element) {
 
-                            if (Array.isArray(value)) {
+                                content = value._element;
+                            } else {
 
-                                value = value.join('');
+                                content = value;
                             }
+                        } else {
 
                             content = content.replace(match, value.toString());
                         }
@@ -210,11 +211,9 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
                     replace(content);
                 };
 
-                var firstTime = true;
-
                 binding();
 
-                firstTime = false;
+                binding.bound = true;
             })();
         }
     }
@@ -228,79 +227,6 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         Array.from(from.childNodes).forEach(function (node) {
             return to.appendChild(node.cloneNode(true));
         });
-    }
-
-    /**
-     * Recursively renders and binds the content of an element.
-     */
-    function loop(tag, prop, temp, template, vm, replace) {
-
-        var firstTime = true;
-
-        function binding() {
-
-            if (firstTime) {
-
-                vm._currentlyCreatingBinding = binding;
-            }
-
-            var data = evaluate(prop, vm);
-
-            delete vm._currentlyCreatingBinding;
-
-            var el = document.createElement(tag);
-
-            if (data && data !== '_invalidExpression') {
-                (function () {
-
-                    var child = parse('<div>' + template + '</div>');
-
-                    if (Array.isArray(data)) {
-
-                        var tempOriginalValue = vm[temp];
-
-                        data.forEach(function (item) {
-
-                            vm[temp] = item;
-
-                            copyChildNodes(child, el);
-
-                            render(el, vm);
-                        });
-
-                        vm[temp] = tempOriginalValue;
-                    } else {
-
-                        if (typeof temp === 'string') {
-
-                            temp = temp.split('.');
-                        }
-
-                        Object.keys(data).forEach(function (key) {
-
-                            var keyOriginalValue = vm[temp[0]],
-                                valOriginalValue = vm[temp[1]];
-
-                            vm[temp[0]] = key;
-                            vm[temp[1]] = data[key];
-
-                            copyChildNodes(child, el);
-
-                            render(el, vm);
-
-                            vm[temp[0]] = keyOriginalValue;
-                            vm[temp[1]] = valOriginalValue;
-                        });
-                    }
-                })();
-            }
-
-            replace(el);
-        }
-
-        binding();
-
-        firstTime = false;
     }
 
     /**
@@ -336,7 +262,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     /*
      * Bind the given attribute to the given vm
      */
-    function bindAttribute(el, attribute, vm) {
+    function bindAttribute(el, attribute, vm, alreadyBound) {
 
         if (attribute.name === 'data-style') {
 
@@ -352,7 +278,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
                     el.style[style[0]] = style[1];
                 }
-            });
+            }, alreadyBound);
         } else {
 
             bind(attribute.value, vm, function (value) {
@@ -368,34 +294,87 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
                     el.setAttribute(attribute.name, value);
                 }
-            });
+            }, alreadyBound);
         }
     }
 
     /**
      * Checks all elements and attributes for template expressions
      */
-    function render(el, vm) {
+    function render(el, vm, alreadyBound) {
 
         forEachAttribute(el, function (attribute) {
 
             if (attribute.name === 'loop' && el.attributes.as) {
+                (function () {
+                    var binding = function binding(data) {
 
-                loop(el.tagName, attribute.value, el.attributes.as.value, el.innerHTML, vm, function (child) {
-                    el.innerHTML = '';
-                    Array.from(child.childNodes).forEach(function (node) {
-                        return el.appendChild(node);
-                    });
-                    forEachAttribute(el, function (attr) {
-                        bindAttribute(el, attr, vm);
-                    });
-                });
+                        if (data) {
+                            (function () {
 
-                el.removeAttribute('loop');
-                el.removeAttribute('as');
+                                var newEl = document.createElement(el.tagName);
+
+                                if (Array.isArray(data)) {
+
+                                    var tempOriginalValue = vm[temp];
+
+                                    data.forEach(function (item) {
+
+                                        vm[temp] = item;
+
+                                        copyChildNodes(child, newEl);
+
+                                        render(newEl, vm, binding.bound);
+                                    });
+
+                                    vm[temp] = tempOriginalValue;
+                                } else {
+
+                                    if (typeof temp === 'string') {
+
+                                        temp = temp.split('.');
+                                    }
+
+                                    Object.keys(data).forEach(function (key) {
+
+                                        var keyOriginalValue = vm[temp[0]],
+                                            valOriginalValue = vm[temp[1]];
+
+                                        vm[temp[0]] = key;
+                                        vm[temp[1]] = data[key];
+
+                                        copyChildNodes(child, newEl);
+
+                                        render(newEl, vm, binding.bound);
+
+                                        vm[temp[0]] = keyOriginalValue;
+                                        vm[temp[1]] = valOriginalValue;
+                                    });
+                                }
+
+                                el.innerHTML = '';
+
+                                Array.from(newEl.childNodes).forEach(function (node) {
+                                    return el.appendChild(node);
+                                });
+                            })();
+                        }
+                    };
+
+                    var child = parse('<div>' + el.innerHTML + '</div>');
+
+                    var temp = el.attributes.as.value;
+
+                    bind('{' + attribute.value + '}', vm, binding, alreadyBound);
+
+                    binding.bound = true;
+
+                    el.removeAttribute('loop');
+                    el.removeAttribute('as');
+                })();
             } else {
 
-                bindAttribute(el, attribute, vm);
+                bindAttribute(el, attribute, vm, alreadyBound);
             }
         });
 
@@ -408,7 +387,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
                 bind(child.textContent, vm, function (value) {
 
                     child.textContent = value;
-                });
+                }, alreadyBound);
                 /*
                  * Element nodes
                  */
@@ -428,10 +407,10 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
                             child = newChild;
                         }
-                    });
+                    }, alreadyBound);
                 } else {
 
-                    render(child, vm);
+                    render(child, vm, alreadyBound);
                 }
             }
         });

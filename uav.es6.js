@@ -169,13 +169,11 @@
      * Parses a template and creates bindings
      * to all values it references
      */
-    function bind(template, vm, replace) {
+    function bind(template, vm, replace, alreadyBound) {
 
         const matches = template.match(/{.*?}/g);
 
         if (matches) {
-
-            let firstTime = true;
 
             function binding() {
 
@@ -186,7 +184,7 @@
 
                     const prop = match.substring(1, match.length - 1);
 
-                    if (firstTime) {
+                    if (!binding.bound && !alreadyBound) {
 
                         vm._currentlyCreatingBinding = binding;
 
@@ -210,17 +208,19 @@
 
                         content = content.replace(match, '');
 
-                    } else if (type === 'object' && value._element) {
+                    } else if (type === 'object') {
 
-                        content = value._element;
+                        if (value._element) {
+
+                            content = value._element;
+
+                        } else {
+
+                            content = value;
+
+                        }
 
                     } else {
-
-                        if (Array.isArray(value)) {
-
-                            value = value.join('');
-                            
-                        }
 
                         content = content.replace(match, value.toString());
 
@@ -234,7 +234,7 @@
 
             binding();
 
-            firstTime = false;
+            binding.bound = true;
 
         }
 
@@ -247,86 +247,6 @@
     function copyChildNodes(from, to) {
 
         Array.from(from.childNodes).forEach(node => to.appendChild(node.cloneNode(true)));
-
-    }
-
-    /**
-     * Recursively renders and binds the content of an element.
-     */
-    function loop(tag, prop, temp, template, vm, replace) {
-
-        let firstTime = true;
-
-        function binding() {
-
-            if (firstTime) {
-
-                vm._currentlyCreatingBinding = binding;
-
-            }
-
-            const data = evaluate(prop, vm);
-
-            delete vm._currentlyCreatingBinding;
-
-            const el = document.createElement(tag);
-
-            if (data && data !== '_invalidExpression') {
-
-                const child = parse(`<div>${template}</div>`);
-
-                if (Array.isArray(data)) {
-
-                    const tempOriginalValue = vm[temp];
-
-                    data.forEach(item => {
-
-                        vm[temp] = item;
-
-                        copyChildNodes(child, el);
-
-                        render(el, vm);
-
-                    });
-
-                    vm[temp] = tempOriginalValue;
-
-                } else {
-
-                    if (typeof temp === 'string') {
-
-                        temp = temp.split('.');
-
-                    }
-
-                    Object.keys(data).forEach(key => {
-
-                        const keyOriginalValue = vm[temp[0]],
-                            valOriginalValue = vm[temp[1]];
-
-                        vm[temp[0]] = key;
-                        vm[temp[1]] = data[key];
-
-                        copyChildNodes(child, el);
-
-                        render(el, vm);
-
-                        vm[temp[0]] = keyOriginalValue;
-                        vm[temp[1]] = valOriginalValue;
-
-                    });
-
-                }
-
-            }
-
-            replace(el);
-
-        }
-
-        binding();
-
-        firstTime = false;
 
     }
 
@@ -368,7 +288,7 @@
     /*
      * Bind the given attribute to the given vm
      */
-    function bindAttribute(el, attribute, vm) {
+    function bindAttribute(el, attribute, vm, alreadyBound) {
 
         if (attribute.name === 'data-style') {
 
@@ -378,7 +298,7 @@
                  */
                 styles = styles.split(';');
 
-                for (let i = 0; i < styles.length; i ++) {
+                for (let i = 0; i < styles.length; i++) {
 
                     const style = styles[i].split(':');
 
@@ -386,7 +306,7 @@
 
                 }
 
-            });
+            }, alreadyBound);
 
         } else {
 
@@ -406,7 +326,7 @@
 
                 }
 
-            });
+            }, alreadyBound);
 
         }
 
@@ -415,32 +335,83 @@
     /**
      * Checks all elements and attributes for template expressions
      */
-    function render(el, vm) {
+    function render(el, vm, alreadyBound) {
 
         forEachAttribute(el, attribute => {
 
             if (attribute.name === 'loop' && el.attributes.as) {
 
-                loop(el.tagName,
-                    attribute.value,
-                    el.attributes.as.value, 
-                    el.innerHTML, 
-                    vm,
-                    child => {
+                const child = parse(`<div>${el.innerHTML}</div>`);
+
+                let temp = el.attributes.as.value;
+
+                function binding(data) {
+
+                    if (data) {
+
+                        const newEl = document.createElement(el.tagName);
+
+                        if (Array.isArray(data)) {
+
+                            const tempOriginalValue = vm[temp];
+
+                            data.forEach(item => {
+
+                                vm[temp] = item;
+
+                                copyChildNodes(child, newEl);
+
+                                render(newEl, vm, binding.bound);
+
+                            });
+
+                            vm[temp] = tempOriginalValue;
+
+                        } else {
+
+                            if (typeof temp === 'string') {
+
+                                temp = temp.split('.');
+
+                            }
+
+                            Object.keys(data).forEach(key => {
+
+                                const keyOriginalValue = vm[temp[0]],
+                                    valOriginalValue = vm[temp[1]];
+
+                                vm[temp[0]] = key;
+                                vm[temp[1]] = data[key];
+
+                                copyChildNodes(child, newEl);
+
+                                render(newEl, vm, binding.bound);
+
+                                vm[temp[0]] = keyOriginalValue;
+                                vm[temp[1]] = valOriginalValue;
+
+                            });
+
+                        }
+
                         el.innerHTML = '';
-                        Array.from(child.childNodes).forEach(node => el.appendChild(node));
-                        forEachAttribute(el, attr => {
-                            bindAttribute(el, attr, vm);
-                        });
+
+                        Array.from(newEl.childNodes).forEach(node => el.appendChild(node));
+
                     }
-                );
+
+                }
+
+                bind(`{${attribute.value}}`, vm, binding, alreadyBound);
+
+                binding.bound = true;
 
                 el.removeAttribute('loop');
                 el.removeAttribute('as');
 
             } else {
 
-                bindAttribute(el, attribute, vm);
+                bindAttribute(el, attribute, vm, alreadyBound);
 
             }
 
@@ -456,7 +427,7 @@
 
                     child.textContent = value;
 
-                });
+                }, alreadyBound);
             /*
              * Element nodes
              */
@@ -478,11 +449,11 @@
 
                         }
 
-                    });
+                    }, alreadyBound);
 
                 } else {
 
-                    render(child, vm);
+                    render(child, vm, alreadyBound);
 
                 }
 
