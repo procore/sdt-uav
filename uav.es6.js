@@ -103,7 +103,7 @@
 
             function set(value) {
 
-                if (data[key] !== value) {
+                if (data[key] !== value || typeof value === 'object') {
 
                     if (value !== '_childPropertyModified') {
 

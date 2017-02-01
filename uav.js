@@ -101,7 +101,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
             function set(value) {
 
-                if (data[key] !== value) {
+                if (data[key] !== value || (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object') {
 
                     if (value !== '_childPropertyModified') {
 
