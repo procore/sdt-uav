@@ -386,7 +386,10 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
                 bind(child.textContent, vm, function (value) {
 
-                    child.textContent = value;
+                    if (child.textContent || value) {
+
+                        child.textContent = value;
+                    }
                 }, alreadyBound);
                 /*
                  * Element nodes

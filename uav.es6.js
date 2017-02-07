@@ -425,7 +425,11 @@
 
                 bind(child.textContent, vm, value => {
 
-                    child.textContent = value;
+                    if (child.textContent || value) {
+
+                        child.textContent = value;
+                        
+                    }
 
                 }, alreadyBound);
             /*
