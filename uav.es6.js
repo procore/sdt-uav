@@ -425,10 +425,20 @@
 
                 bind(child.textContent, vm, value => {
 
-                    if (child.textContent || value) {
+                    // Ridiculous IE10 behavior
+                    // http://stackoverflow.com/questions/28741528/is-there-a-bug-in-internet-explorer-9-10-with-innerhtml
+                    if (value) {
 
                         child.textContent = value;
-                        
+
+                    } else if (child.innerHTML) {
+
+                        while (child.firstChild) {
+
+                            child.removeChild(child.firstChild);
+
+                        }
+
                     }
 
                 }, alreadyBound);

@@ -163,58 +163,56 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         var matches = template.match(/{.*?}/g);
 
         if (matches) {
-            (function () {
-                var binding = function binding() {
+            var binding = function binding() {
 
-                    var value = void 0,
-                        content = template;
+                var value = void 0,
+                    content = template;
 
-                    matches.forEach(function (match) {
+                matches.forEach(function (match) {
 
-                        var prop = match.substring(1, match.length - 1);
+                    var prop = match.substring(1, match.length - 1);
 
-                        if (!binding.bound && !alreadyBound) {
+                    if (!binding.bound && !alreadyBound) {
 
-                            vm._currentlyCreatingBinding = binding;
-                        }
+                        vm._currentlyCreatingBinding = binding;
+                    }
 
-                        value = evaluate(prop, vm);
+                    value = evaluate(prop, vm);
 
-                        delete vm._currentlyCreatingBinding;
+                    delete vm._currentlyCreatingBinding;
 
-                        var type = typeof value === 'undefined' ? 'undefined' : _typeof(value);
+                    var type = typeof value === 'undefined' ? 'undefined' : _typeof(value);
 
-                        if (type === 'boolean') {
+                    if (type === 'boolean') {
 
-                            content = content.replace(match, value ? prop : '');
-                        } else if (type === 'function') {
+                        content = content.replace(match, value ? prop : '');
+                    } else if (type === 'function') {
 
-                            content = value;
-                        } else if (value === undefined || value === '_invalidExpression' || value === null) {
+                        content = value;
+                    } else if (value === undefined || value === '_invalidExpression' || value === null) {
 
-                            content = content.replace(match, '');
-                        } else if (type === 'object') {
+                        content = content.replace(match, '');
+                    } else if (type === 'object') {
 
-                            if (value._element) {
+                        if (value._element) {
 
-                                content = value._element;
-                            } else {
-
-                                content = value;
-                            }
+                            content = value._element;
                         } else {
 
-                            content = content.replace(match, value.toString());
+                            content = value;
                         }
-                    });
+                    } else {
 
-                    replace(content);
-                };
+                        content = content.replace(match, value.toString());
+                    }
+                });
 
-                binding();
+                replace(content);
+            };
 
-                binding.bound = true;
-            })();
+            binding();
+
+            binding.bound = true;
         }
     }
 
@@ -306,72 +304,68 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         forEachAttribute(el, function (attribute) {
 
             if (attribute.name === 'loop' && el.attributes.as) {
-                (function () {
-                    var binding = function binding(data) {
+                var binding = function binding(data) {
 
-                        if (data) {
-                            (function () {
+                    if (data) {
 
-                                var newEl = document.createElement(el.tagName);
+                        var newEl = document.createElement(el.tagName);
 
-                                if (Array.isArray(data)) {
+                        if (Array.isArray(data)) {
 
-                                    var tempOriginalValue = vm[temp];
+                            var tempOriginalValue = vm[temp];
 
-                                    data.forEach(function (item) {
+                            data.forEach(function (item) {
 
-                                        vm[temp] = item;
+                                vm[temp] = item;
 
-                                        copyChildNodes(child, newEl);
+                                copyChildNodes(child, newEl);
 
-                                        render(newEl, vm, binding.bound);
-                                    });
+                                render(newEl, vm, binding.bound);
+                            });
 
-                                    vm[temp] = tempOriginalValue;
-                                } else {
+                            vm[temp] = tempOriginalValue;
+                        } else {
 
-                                    if (typeof temp === 'string') {
+                            if (typeof temp === 'string') {
 
-                                        temp = temp.split('.');
-                                    }
+                                temp = temp.split('.');
+                            }
 
-                                    Object.keys(data).forEach(function (key) {
+                            Object.keys(data).forEach(function (key) {
 
-                                        var keyOriginalValue = vm[temp[0]],
-                                            valOriginalValue = vm[temp[1]];
+                                var keyOriginalValue = vm[temp[0]],
+                                    valOriginalValue = vm[temp[1]];
 
-                                        vm[temp[0]] = key;
-                                        vm[temp[1]] = data[key];
+                                vm[temp[0]] = key;
+                                vm[temp[1]] = data[key];
 
-                                        copyChildNodes(child, newEl);
+                                copyChildNodes(child, newEl);
 
-                                        render(newEl, vm, binding.bound);
+                                render(newEl, vm, binding.bound);
 
-                                        vm[temp[0]] = keyOriginalValue;
-                                        vm[temp[1]] = valOriginalValue;
-                                    });
-                                }
-
-                                el.innerHTML = '';
-
-                                Array.from(newEl.childNodes).forEach(function (node) {
-                                    return el.appendChild(node);
-                                });
-                            })();
+                                vm[temp[0]] = keyOriginalValue;
+                                vm[temp[1]] = valOriginalValue;
+                            });
                         }
-                    };
 
-                    var child = parse('<div>' + el.innerHTML + '</div>');
+                        el.innerHTML = '';
 
-                    var temp = el.attributes.as.value;
+                        Array.from(newEl.childNodes).forEach(function (node) {
+                            return el.appendChild(node);
+                        });
+                    }
+                };
 
-                    bind('{' + attribute.value + '}', vm, binding, alreadyBound);
+                var child = parse('<div>' + el.innerHTML + '</div>');
 
-                    binding.bound = true;
+                var temp = el.attributes.as.value;
 
-                    el.removeAttribute('loop');
-                    el.removeAttribute('as');
-                })();
+                bind('{' + attribute.value + '}', vm, binding, alreadyBound);
+
+                binding.bound = true;
+
+                el.removeAttribute('loop');
+                el.removeAttribute('as');
             } else {
 
                 bindAttribute(el, attribute, vm, alreadyBound);
@@ -386,9 +380,17 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
                 bind(child.textContent, vm, function (value) {
 
-                    if (child.textContent || value) {
+                    // Ridiculous IE10 behavior
+                    // http://stackoverflow.com/questions/28741528/is-there-a-bug-in-internet-explorer-9-10-with-innerhtml
+                    if (value) {
 
                         child.textContent = value;
+                    } else if (child.innerHTML) {
+
+                        while (child.firstChild) {
+
+                            child.removeChild(child.firstChild);
+                        }
                     }
                 }, alreadyBound);
                 /*
