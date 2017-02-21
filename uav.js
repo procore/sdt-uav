@@ -382,15 +382,12 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
                     // Ridiculous IE10 behavior
                     // http://stackoverflow.com/questions/28741528/is-there-a-bug-in-internet-explorer-9-10-with-innerhtml
-                    if (value) {
+                    try {
 
                         child.textContent = value;
-                    } else if (child.innerHTML) {
+                    } catch (e) {
 
-                        while (child.firstChild) {
-
-                            child.removeChild(child.firstChild);
-                        }
+                        child.innerHTML = '';
                     }
                 }, alreadyBound);
                 /*
