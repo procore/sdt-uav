@@ -270,6 +270,14 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
                  */
                 el.style.cssText = style;
             }, alreadyBound);
+        } else if (attribute.name === 'data-src') {
+
+            bind(attribute.value, vm, function (src) {
+
+                el.removeAttribute('data-src');
+
+                el.setAttribute('src', src);
+            }, alreadyBound);
         } else {
 
             bind(attribute.value, vm, function (value) {

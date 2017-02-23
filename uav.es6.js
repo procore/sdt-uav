@@ -300,6 +300,16 @@
 
             }, alreadyBound);
 
+        } else if (attribute.name === 'data-src') {
+
+            bind(attribute.value, vm, src => {
+
+                el.removeAttribute('data-src');
+
+                el.setAttribute('src', src);
+
+            }, alreadyBound);
+
         } else {
 
             bind(attribute.value, vm, value => {
