@@ -290,21 +290,13 @@
      */
     function bindAttribute(el, attribute, vm, alreadyBound) {
 
-        if (attribute.name === 'data-style') {
+        if (attribute.name === 'style') {
 
-            bind(attribute.value, vm, styles => {
+            bind(attribute.value, vm, style => {
                 /*
                  * IE doesn't support setAttribute for styles
                  */
-                styles = styles.split(';');
-
-                for (let i = 0; i < styles.length; i++) {
-
-                    const style = styles[i].split(':');
-
-                    el.style[style[0]] = style[1];
-
-                }
+                el.style.cssText = style;
 
             }, alreadyBound);
 
