@@ -439,7 +439,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
             vm._element = render(parse(template), vm);
         }
 
-        if (selector) {
+        if (typeof selector === 'string') {
 
             var app = document.querySelector(selector);
 
@@ -447,6 +447,14 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
             app.appendChild(vm._element);
         }
+
+        Array.from(arguments).forEach(function (arg) {
+
+            if (typeof arg === 'function') {
+
+                arg(vm._element);
+            }
+        });
 
         return vm;
     }

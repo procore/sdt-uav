@@ -497,7 +497,7 @@
 
         }
 
-        if (selector) {
+        if (typeof selector === 'string') {
 
             const app = document.querySelector(selector);
 
@@ -506,6 +506,16 @@
             app.appendChild(vm._element);
 
         }
+
+        Array.from(arguments).forEach(arg => {
+            
+            if (typeof arg === 'function') {
+
+                arg(vm._element);
+
+            }
+
+        });
 
         return vm;
 
