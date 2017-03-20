@@ -38,7 +38,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
      */
     function isVmEligible(value) {
 
-        return value && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object';
+        return value && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object' && !value.tagName;
     }
 
     /**
@@ -303,7 +303,10 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     function render(el, vm, alreadyBound) {
 
         forEachAttribute(el, function (attribute) {
-
+            /*
+             * TODO: flatten loop templates into parent templates,
+             * and render normally instead of recursively. Remove alreadyBound.
+             */
             if (attribute.name === 'loop' && el.attributes.as) {
                 var binding = function binding(data) {
 

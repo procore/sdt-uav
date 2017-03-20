@@ -35,7 +35,7 @@
      */
     function isVmEligible(value) {
 
-        return value && typeof value === 'object';
+        return value && typeof value === 'object' && !value.tagName;
 
     }
 
@@ -340,7 +340,10 @@
     function render(el, vm, alreadyBound) {
 
         forEachAttribute(el, attribute => {
-
+            /*
+             * TODO: flatten loop templates into parent templates,
+             * and render normally instead of recursively. Remove alreadyBound.
+             */
             if (attribute.name === 'loop' && el.attributes.as) {
 
                 const child = parse(`<div>${el.innerHTML}</div>`);
