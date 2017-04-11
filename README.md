@@ -1,6 +1,6 @@
 # UAV
 
-UAV is a JavaScript utility for templates with one-way data binding. It is 1.6KB after compression.
+UAV is a small JavaScript utility for templates with one-way data binding. 
 
 ## Install
 
@@ -15,9 +15,9 @@ UAV is a JavaScript utility for templates with one-way data binding. It is 1.6KB
 `uav.model(model)`
 
 Arguments:
-- `model`: a raw object, with any properties, to be used as the view model.
+- `model`: an object to be used as the view model.
 
-Returns: An object with the same properties as `model`. When a property on this object is changed, any template expressions which reference it will be reevaluated and rendered.
+Returns: An object with the same properties as `model`. When a property on this object is changed, any template expressions which reference it will be reevaluated and, if necessary, rendered.
 
 ```javascript
 const model = uav.model({
@@ -27,12 +27,13 @@ const model = uav.model({
 
 ### Creating a Component
 
-`uav.component(model, template, selector)`
+`uav.component([model], template, [selector], [callback])`
 
 Arguments:
-- `model`: The return value of `uav.model`. Optional.
+- `model`: A model created with `uav.model()`. Optional.
 - `template`: A template string.
-- `selector`: An optional CSS selector. If included, the component will be rendered into the first matched element.
+- `selector`: A CSS selector indicating a parent element in which to render this component. Optional.
+- `callback`: A function to call after the initial render. Passed the component's top-level DOM element. Optional.
 
 Returns: The model.
 
@@ -50,6 +51,7 @@ Basic expression:
 ```javascript
 `<div>This is a content expression: {content}</div>`
 ```
+
 Attribute expression:
 ```javascript
 `<div class="wrapper {visible}"></div>`
@@ -66,14 +68,18 @@ Any template expression which evaluates to a function is assumed to be an event 
 
 Array loop expression:
 ```javascript
-`<li loop="items" as="item">{item}</li>`
+`<ul loop="items" as="item,index">
+    <li>{item}</li>
+</ul>`
 ```
 
 Add the `loop` and `as` attributes to an element to repeat its content for each item in an array.
 
 Object loop expression:
 ```javascript
-`<li loop="object" as="key.value">{key} = {value}</li>`
+`<ul loop="object" as="value,key">
+    <li>{key} = {value}</li>
+</ul>`
 ```
 
 ## Child Components
@@ -134,6 +140,28 @@ This will render the following into the `#app` component:
     <div>This is passed from parent to child.</div>
 </div>
 ```
+
+## Special Attributes
+
+### data-src
+
+Imagine that an image source is bound to a template expression:
+
+`uav.component('<img src="{imageSource}" />');`
+
+To prevent your browser from making a request to `/{imageSource}` before your JavaSrcript runs, you can use the `data-src` attribute.
+
+`uav.component('<img data-src="{imageSource}" />');`
+
+### data-style
+
+Internet Explorer can be extremely picky about the value of an inline `style` tag. A template expression like the following will work in any browser except IE:
+
+`uav.component('<div style="left: {left}px"></div>');`
+
+To support Internet Explorer, you can use the `data-style` attribute instead:
+
+`uav.component('<div data-style="left: {left}px"></div>');`
 
 ## DOM Access
 

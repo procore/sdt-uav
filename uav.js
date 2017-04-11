@@ -262,7 +262,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
      */
     function bindAttribute(el, attribute, vm, alreadyBound) {
 
-        if (attribute.name === 'style') {
+        if (attribute.name === 'style' || attribute.name === 'data-style') {
 
             bind(attribute.value, vm, function (style) {
                 /*
@@ -314,43 +314,21 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
                         var newEl = document.createElement(el.tagName);
 
-                        if (Array.isArray(data)) {
+                        Object.keys(data).forEach(function (i) {
 
-                            var tempOriginalValue = vm[temp];
+                            var valOriginalValue = vm[val],
+                                keyOriginalValue = vm[i];
 
-                            data.forEach(function (item) {
+                            vm[val] = data[i];
+                            vm[key] = i;
 
-                                vm[temp] = item;
+                            copyChildNodes(child, newEl);
 
-                                copyChildNodes(child, newEl);
+                            render(newEl, vm, binding.bound);
 
-                                render(newEl, vm, binding.bound);
-                            });
-
-                            vm[temp] = tempOriginalValue;
-                        } else {
-
-                            if (typeof temp === 'string') {
-
-                                temp = temp.split('.');
-                            }
-
-                            Object.keys(data).forEach(function (key) {
-
-                                var keyOriginalValue = vm[temp[0]],
-                                    valOriginalValue = vm[temp[1]];
-
-                                vm[temp[0]] = key;
-                                vm[temp[1]] = data[key];
-
-                                copyChildNodes(child, newEl);
-
-                                render(newEl, vm, binding.bound);
-
-                                vm[temp[0]] = keyOriginalValue;
-                                vm[temp[1]] = valOriginalValue;
-                            });
-                        }
+                            vm[val] = valOriginalValue;
+                            vm[key] = keyOriginalValue;
+                        });
 
                         el.innerHTML = '';
 
@@ -362,7 +340,9 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
                 var child = parse('<div>' + el.innerHTML + '</div>');
 
-                var temp = el.attributes.as.value;
+                var temp = el.attributes.as.value.split(','),
+                    val = temp ? temp[0] : 'val',
+                    key = temp ? temp[1] : 'key';
 
                 bind('{' + attribute.value + '}', vm, binding, alreadyBound);
 

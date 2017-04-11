@@ -290,7 +290,7 @@
      */
     function bindAttribute(el, attribute, vm, alreadyBound) {
 
-        if (attribute.name === 'style') {
+        if (attribute.name === 'style' || attribute.name === 'data-style') {
 
             bind(attribute.value, vm, style => {
                 /*
@@ -348,7 +348,9 @@
 
                 const child = parse(`<div>${el.innerHTML}</div>`);
 
-                let temp = el.attributes.as.value;
+                let temp = el.attributes.as.value.split(','),
+                    val = temp ? temp[0] : 'val',
+                    key = temp ? temp[1] : 'key';
 
                 function binding(data) {
 
@@ -356,48 +358,22 @@
 
                         const newEl = document.createElement(el.tagName);
 
-                        if (Array.isArray(data)) {
+                        Object.keys(data).forEach(i => {
 
-                            const tempOriginalValue = vm[temp];
+                            const valOriginalValue = vm[val],
+                                keyOriginalValue = vm[i];
 
-                            data.forEach(item => {
+                            vm[val] = data[i];
+                            vm[key] = i;
 
-                                vm[temp] = item;
+                            copyChildNodes(child, newEl);
 
-                                copyChildNodes(child, newEl);
+                            render(newEl, vm, binding.bound);
 
-                                render(newEl, vm, binding.bound);
+                            vm[val] = valOriginalValue;
+                            vm[key] = keyOriginalValue;
 
-                            });
-
-                            vm[temp] = tempOriginalValue;
-
-                        } else {
-
-                            if (typeof temp === 'string') {
-
-                                temp = temp.split('.');
-
-                            }
-
-                            Object.keys(data).forEach(key => {
-
-                                const keyOriginalValue = vm[temp[0]],
-                                    valOriginalValue = vm[temp[1]];
-
-                                vm[temp[0]] = key;
-                                vm[temp[1]] = data[key];
-
-                                copyChildNodes(child, newEl);
-
-                                render(newEl, vm, binding.bound);
-
-                                vm[temp[0]] = keyOriginalValue;
-                                vm[temp[1]] = valOriginalValue;
-
-                            });
-
-                        }
+                        });
 
                         el.innerHTML = '';
 
