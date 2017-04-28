@@ -270,14 +270,16 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
                  */
                 el.style.cssText = style;
             }, alreadyBound);
+
+            el.removeAttribute('data-style');
         } else if (attribute.name === 'data-src') {
 
             bind(attribute.value, vm, function (src) {
 
-                el.removeAttribute('data-src');
-
                 el.setAttribute('src', src);
             }, alreadyBound);
+
+            el.removeAttribute('data-src');
         } else {
 
             bind(attribute.value, vm, function (value) {
@@ -364,14 +366,22 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
                 bind(child.textContent, vm, function (value) {
 
-                    // Ridiculous IE10 behavior
-                    // http://stackoverflow.com/questions/28741528/is-there-a-bug-in-internet-explorer-9-10-with-innerhtml
-                    try {
+                    if (value.tagName) {
 
-                        child.textContent = value;
-                    } catch (e) {
+                        child.parentNode.replaceChild(value, child);
 
-                        child.innerHTML = '';
+                        child = value;
+                    } else {
+
+                        // Ridiculous IE10 behavior
+                        // http://stackoverflow.com/questions/28741528/is-there-a-bug-in-internet-explorer-9-10-with-innerhtml
+                        try {
+
+                            child.textContent = value;
+                        } catch (e) {
+
+                            child.innerHTML = '';
+                        }
                     }
                 }, alreadyBound);
                 /*

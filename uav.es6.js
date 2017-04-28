@@ -300,15 +300,17 @@
 
             }, alreadyBound);
 
+            el.removeAttribute('data-style');
+
         } else if (attribute.name === 'data-src') {
 
             bind(attribute.value, vm, src => {
 
-                el.removeAttribute('data-src');
-
                 el.setAttribute('src', src);
 
             }, alreadyBound);
+
+            el.removeAttribute('data-src');
 
         } else {
 
@@ -406,15 +408,23 @@
 
                 bind(child.textContent, vm, value => {
 
-                    // Ridiculous IE10 behavior
-                    // http://stackoverflow.com/questions/28741528/is-there-a-bug-in-internet-explorer-9-10-with-innerhtml
-                    try {
+                    if (value.tagName) {
 
-                        child.textContent = value;
+                        child.parentNode.replaceChild(value, child);
 
-                    } catch(e) {
+                        child = value;
 
-                        child.innerHTML = '';
+                    } else {
+
+                        // Ridiculous IE10 behavior
+                        // http://stackoverflow.com/questions/28741528/is-there-a-bug-in-internet-explorer-9-10-with-innerhtml
+                        try {
+
+                            child.textContent = value;
+                        } catch (e) {
+
+                            child.innerHTML = '';
+                        }
 
                     }
 

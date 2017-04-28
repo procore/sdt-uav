@@ -175,6 +175,12 @@ Access all matched elements by passing a callback:
 
 `uav('.item', item => item.classList.toggle('visible'));`
 
+## Collapsing Whitespace
+
+Using multiline template strings creates unnecessary whitespace in your javascript files. To collapse whitespace, add a step like this to your build process:
+
+`tr -s " " < dist/bundle.js > dist/tmp && mv dist/tmp dist/bundle.js`
+
 ## Browser Compatibility
 
 IE9+
