@@ -1,0 +1,6 @@
+- putting a dom element or component within in a text node results in the whole text node being replaced
+- test.html should be removed
+- uav.min.js needs to be updated
+- audit binding.bound
+- documentation
+- comments

@@ -4,55 +4,50 @@ UAV is a small JavaScript utility for templates with one-way data binding.
 
 ## Install
 
-`npm install uav` or `yarn add uav`
+`npm install uav`
 
 ## Example
 
 [See a JSFiddle](http://jsfiddle.net/t16bzg3m/7/)
 
-### Creating a Model
+### `uav.component`
 
-`uav.model(model)`
-
-Arguments:
-- `model`: an object to be used as the view model.
-
-Returns: An object with the same properties as `model`. When a property on this object is changed, any template expressions which reference it will be reevaluated and, if necessary, rendered.
-
-```javascript
-const model = uav.model({
-    text: 'hello, world!'
-});
-```
-
-### Creating a Component
-
-`uav.component([model], template, [selector], [callback])`
+`uav.component(model, template, selector, callback)`
 
 Arguments:
-- `model`: A model created with `uav.model()`. Optional.
-- `template`: A template string.
+- `model`: A view model. Optional.
+- `template`: A template string. Must have exactly one root node.
 - `selector`: A CSS selector indicating a parent element in which to render this component. Optional.
 - `callback`: A function to call after the initial render. Passed the component's top-level DOM element. Optional.
 
 Returns: The model.
 
 ```javascript
-const component = uav.component(model, `
-    <h1>{text}</h1>
-`);
+const component = uav.component({text: 'hi!'}, '<h1>{text}</h1>', '#app');
+```
+
+After creating a component, any changes to the model will trigger an optimized re-render. Only the smallest DOM change possible will occur, down to the level of updating a single element attribute or text node.
+
+### `uav.model`
+
+If you'd like to create a view model before associating it with a template, use this method.
+
+```javascript
+const model = uav.model({text: 'hi!'});
+
+const component = uav.component(model, '<h1>{text}</h1>')
 ```
 
 ### Template Expressions
 
-Expressions are best explained by example:
+UAV expressions use `{curly}` notation. Any valid javascript can be used in an expression. The result of the expression can be a string, number, function, boolean, DOM element, UAV component, undefined, or null.
 
-Basic expression:
+#### Basic expression:
 ```javascript
 `<div>This is a content expression: {content}</div>`
 ```
 
-Attribute expression:
+#### Attribute expression:
 ```javascript
 `<div class="wrapper {visible}"></div>`
 ```
@@ -68,40 +63,29 @@ Any template expression which evaluates to a function is assumed to be an event 
 
 Array loop expression:
 ```javascript
-`<ul loop="items" as="item,index">
+`<ul loop="items" as="item">
     <li>{item}</li>
 </ul>`
 ```
 
 Add the `loop` and `as` attributes to an element to repeat its content for each item in an array.
 
-Object loop expression:
-```javascript
-`<ul loop="object" as="value,key">
-    <li>{key} = {value}</li>
-</ul>`
-```
-
 ## Child Components
 
-Components can be rendered into other components by adding them to the model and referencing them as HTML tags.
+A components can be rendered into another component by adding it to the model and referencing it as an HTML element.
 
 ```javascript
 const child = uav.component('<div>I am a child.</div>');
 
-const model = uav.model({
-    child
-});
-
-uav.component(model, `
+uav.component({child}, `
     <div>
         This is a component with a child.
         <child></child>
     </div>
-`, '#app');
+`);
 ```
 
-This will render the following into the `#app` component:
+This will render the following:
 
 ```html
 <div>
@@ -110,15 +94,12 @@ This will render the following into the `#app` component:
 </div>
 ```
 
+> Note: child components must use names that are both valid javascript properties and valid HTML tags. Notably, this disallows using camel case for child component names.
+
 ## Passing Data to Children
 
 ```javascript
-function child(data) {
-
-    const childModel = uav.model({ data });
-
-    return uav.component(childModel, `<div>{data}</div>`);
-}
+const child = data => uav.component({data}, `<div>{data}</div>`);
 
 const model = uav.model({
     child: child('This is passed from parent to child.')
@@ -165,7 +146,7 @@ To support Internet Explorer, you can use the `data-style` attribute instead:
 
 ## DOM Access
 
-Data-bound templates generally supplant the need to perform any manual DOM manipulation. However, there are occasions where it is unavoidable. Elements can be accessed by passing a selector (and optionally, a callback) to the `uav` function.
+Elements can be accessed by passing a selector to the `uav` function.
 
 Access the first matched element:
 
@@ -174,6 +155,10 @@ Access the first matched element:
 Access all matched elements by passing a callback:
 
 `uav('.item', item => item.classList.toggle('visible'));`
+
+Access the nth matched element:
+
+`uav('.item', 3).classList.toggle('visible');`
 
 ## Collapsing Whitespace
 

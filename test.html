@@ -10,16 +10,25 @@ const uav = window.uav;
 
 const model = uav.model({
     text: 'item',
-    items: [1, 2, 3, 4, 5]
+    items: [1, 2, 3, 4, 5],
+    child: {
+        key: 'value'
+    }
 });
 
 const template = `
 <ul loop="items" as="item">
-    <li>{item} {console.log(item)}</loop>
-</ul>
-`;
+    <li>{_parent.text} {item} {console.log(item)}</li>
+</ul>`;
 
-uav.component(model, template, '.app');
+uav.component({
+    list: uav.component(model, template)
+}, `
+<div>
+    <h1>hello</h1>
+    test {list} test
+</div>
+`, '.app');
 </script>
 </body>
 </html
