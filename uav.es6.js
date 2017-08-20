@@ -40,48 +40,24 @@
     }
 
     /**
-     * Binds an object's properties to the given function
-     */
-    function bindPropertiesToSetter(obj, setter) {
-
-        Object.keys(obj).forEach(key => {
-
-            let value = obj[key];
-
-            Object.defineProperty(obj, key, {
-
-                get: () => value,
-                set: newVal => {
-
-                    value = newVal;
-
-                    setter('_childPropertyModified');
-
-                }
-
-            });
-
-            if (isVmEligible(obj[key])) {
-
-                bindPropertiesToSetter(obj[key], setter);
-
-            }
-
-        });
-
-    }
-
-    /**
      * Returns an object that will execute
      * bindings when its properties are set
      */
     function model(data) {
 
-        const vm = {
-            _bindings: {}
-        };
+        const vm = Array.isArray(data) ? [] : {};
+
+        vm._bindings = {};
 
         Object.keys(data).forEach(key => {
+
+            vm[key] = data[key];
+
+            if (isVmEligible(data[key])) {
+
+                data[key] = model(data[key]);
+
+            }
 
             function get() {
 
@@ -105,17 +81,13 @@
 
                 if (data[key] !== value || typeof value === 'object') {
 
-                    if (value !== '_childPropertyModified') {
+                    if (isVmEligible(value)) {
 
-                        if (isVmEligible(value)) {
-
-                            bindPropertiesToSetter(value, set);
-
-                        }
-
-                        data[key] = value;
+                        value = model(value);
 
                     }
+
+                    data[key] = value;
 
                     if (vm._bindings[key]) {
 
@@ -131,12 +103,6 @@
                 get,
                 set
             });
-
-            if (isVmEligible(data[key])) {
-
-                bindPropertiesToSetter(data[key], set);
-
-            }
 
         });
 
@@ -342,46 +308,44 @@
     function render(el, vm, alreadyBound) {
 
         forEachAttribute(el, attribute => {
-            /*
-             * TODO: flatten loop templates into parent templates,
-             * and render normally instead of recursively. Remove alreadyBound.
-             */
+
             if (attribute.name === 'loop' && el.attributes.as) {
 
-                const child = parse(`<div>${el.innerHTML}</div>`);
+                const template = parse(el.innerHTML);
 
-                let temp = el.attributes.as.value.split(','),
-                    val = temp ? temp[0] : 'val',
-                    key = temp ? temp[1] : 'key';
+                function binding() {
 
-                function binding(data) {
+                    el.innerHTML = '';
 
-                    if (data) {
+                    const loopVM = evaluate(attribute.value, vm);
 
-                        const newEl = document.createElement(el.tagName);
+                    loopVM.forEach(value => {
 
-                        Object.keys(data).forEach(i => {
+                        function innerBinding() {
 
-                            const valOriginalValue = vm[val],
-                                keyOriginalValue = vm[i];
+                            const child = template.cloneNode();
 
-                            vm[val] = data[i];
-                            vm[key] = i;
+                            child.innerHTML = template.innerHTML;
 
-                            copyChildNodes(child, newEl);
+                            el.appendChild(child);
 
-                            render(newEl, vm, binding.bound);
+                            loopVM[el.attributes.as.value] = value;
 
-                            vm[val] = valOriginalValue;
-                            vm[key] = keyOriginalValue;
+                            loopVM._currentlyCreatingBinding = innerBinding;
 
-                        });
+                            render(child, loopVM);
 
-                        el.innerHTML = '';
+                            delete loopVM._currentlyCreatingBinding;
 
-                        Array.from(newEl.childNodes).forEach(node => el.appendChild(node));
+                        }
 
-                    }
+                        innerBinding();
+
+                        innerBinding.bound = true;
+
+                    });
+
+                    delete loopVM[el.attributes.as.value];
 
                 }
 
@@ -389,8 +353,53 @@
 
                 binding.bound = true;
 
-                el.removeAttribute('loop');
-                el.removeAttribute('as');
+                // function binding(data) {
+
+                //     if (data) {
+
+                //         const newEl = document.createElement(el.tagName);
+
+                //         Object.keys(data).forEach((i, index) => {
+
+                //             // const valOriginalValue = vm[val],
+                //             //     keyOriginalValue = vm[i];
+
+                //             // vm[val] = data[i];
+                //             // vm[key] = i;
+
+                //             // copyChildNodes(child, newEl);
+
+                //             // render(Array.from(newEl.children)[index], vm, binding.bound);
+
+                //             // vm[val] = valOriginalValue;
+                //             // vm[key] = keyOriginalValue;
+                            
+                //             function keyBinding(value) {
+
+                //                 copyChildNodes(child, newEl);
+
+                //                 render(Array.from(newEl.children)[index], data, keyBinding.bound);
+
+                //             }
+
+                //             bind(`{${i}}`, data, keyBinding, keyBinding.bound);
+
+                //         });
+
+                //         el.innerHTML = '';
+
+                //         Array.from(newEl.childNodes).forEach(node => el.appendChild(node));
+
+                //     }
+
+                // }
+
+                // bind(`{${attribute.value}}`, vm, binding, alreadyBound);
+
+                // binding.bound = true;
+
+                // el.removeAttribute('loop');
+                // el.removeAttribute('as');
 
             } else {
 
@@ -514,11 +523,21 @@
      * Returns the first matched DOM node or executes
      * a callback on all matched DOM nodes
      */
-    function uav(selector, callback) {
+    const uav = (selector, fnOrIndex) => {
 
-        if (callback) {
+        if (fnOrIndex !== undefined) {
 
-            Array.from(document.querySelectorAll(selector)).forEach(callback);
+            const els = Array.from(document.querySelectorAll(selector));
+
+            if (typeof fnOrIndex === 'function') {
+
+                els.forEach(fnOrIndex);
+
+            } else if (typeof fnOrIndex === 'number') {
+
+                return els[fnOrIndex];
+
+            }
 
         } else {
 
@@ -526,7 +545,7 @@
 
         }
 
-    }
+    };
 
     /**
      * Returns a placeholder component, for cases

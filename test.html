@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+</head>
+<body>
+<div class="app"></div>
+<script src="uav.es6.js"></script>
+<script>
+const uav = window.uav;
+
+const model = uav.model({
+    text: 'item',
+    items: [1, 2, 3, 4, 5]
+});
+
+const template = `
+<ul loop="items" as="item">
+    <li>{item} {console.log(item)}</loop>
+</ul>
+`;
+
+uav.component(model, template, '.app');
+</script>
+</body>
+</html
