@@ -1,6 +1,7 @@
 - putting a dom element or component within in a text node results in the whole text node being replaced
+- text nodes are inefficient. split them up before binding them and replace each expression individually
 - test.html should be removed
 - uav.min.js needs to be updated
-- audit binding.bound
 - documentation
 - comments
+- need type protection now that VMs can be anything

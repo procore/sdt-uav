@@ -9,17 +9,22 @@
 const uav = window.uav;
 
 const model = uav.model({
-    text: 'item',
-    items: [1, 2, 3, 4, 5],
-    child: {
-        key: 'value'
-    }
+    text: 'foobar',
+    strings: ['string'],
+    objects: [{name: 'object'}],
+    click: char => () => model.text += char
 });
 
 const template = `
-<ul loop="items" as="item">
-    <li>{_parent.text} {item} {console.log(item)}</li>
-</ul>`;
+<div>
+    {text}
+    <ul loop="strings">
+        <li onclick={click('s')}>{text} {this} {console.log(this)}</li>
+    </ul>
+    <ol loop="objects">
+        <li onclick={click('t')}>{text} {this.name} {console.log(this.name)}</li>
+    </ol>
+</div>`;
 
 uav.component({
     list: uav.component(model, template)

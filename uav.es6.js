@@ -35,7 +35,7 @@
 
         } else {
 
-            return document.querySelector(selector);
+            return document.querySelector(selector) || document.createElement('div');
 
         }
 
@@ -75,22 +75,19 @@
      * Returns an object that will execute
      * bindings when its properties are set
      */
-    uav.model = (data, parent) => {
+    uav.model = data => {
 
         const vm = Array.isArray(data) ? [] : {};
 
-        vm._parent = parent;
-
-        vm._bindings = {};
-
-        /* Garbage collection callbacks */
-        vm._gc = [];
+        vm._bound = {
+            _gc: []
+        };
 
         Object.keys(data).forEach(key => {
 
             vm[key] = data[key];
 
-            if (isVmEligible(data[key]) && !data[key]._gc) {
+            if (isVmEligible(data[key]) && !data[key]._bound) {
 
                 data[key] = uav.model(data[key], vm);
 
@@ -106,22 +103,22 @@
                  */
                 if (binding) {
 
-                    vm._bindings[key] = vm._bindings[key] || [];
+                    vm._bound[key] = vm._bound[key] || [];
 
-                    vm._bindings[key].push(binding);
+                    vm._bound[key].push(binding);
 
                     /**
                      * If this binding isn't for a property of this vm,
                      * Save a reference so that we can remove
                      * the binding if the other vm is overwritten.
                      */
-                    if (binding._vm !== vm) {
+                    if (binding._vm !== vm && binding._vm._bound) {
 
-                        binding._vm._gc.push(() => {
+                        binding._vm._bound._gc.push(() => {
 
-                            const index = vm._bindings[key].indexOf(binding);
+                            const index = vm._bound[key].indexOf(binding);
 
-                            vm._bindings[key].splice(index, 1);
+                            vm._bound[key].splice(index, 1);
 
                         });
 
@@ -137,7 +134,7 @@
 
                 if (data[key] !== value || typeof value === 'object') {
 
-                    if (isVmEligible(value) && !value._gc) {
+                    if (isVmEligible(value) && !value._bound) {
 
                         value = uav.model(value, vm);
 
@@ -148,9 +145,9 @@
                      * run any garbage collection callbacks
                      * that we registered for it.
                      */
-                    if (data[key] && data[key]._gc) {
+                    if (data[key] && data[key]._bound) {
 
-                        data[key]._gc.forEach(fn => fn());
+                        data[key]._bound._gc.forEach(fn => fn());
 
                         delete data[key];
 
@@ -158,9 +155,9 @@
 
                     data[key] = value;
 
-                    if (vm._bindings[key]) {
+                    if (vm._bound[key]) {
 
-                        vm._bindings[key].forEach(fn => fn());
+                        vm._bound[key].forEach(fn => fn());
 
                     }
 
@@ -186,11 +183,11 @@
      * with the privileges or scope of the
      * surrounding execution context.
      */
-    function evaluate(expression, scope) {
+    function evaluate(expression, scope, globals) {
 
         try {
 
-            return new Function(`with(arguments[0]){return ${expression};}`)(scope);
+            return new Function('_g', '_s', `if(_g){_s=Object.assign({},_s,_g)}with(_s){return ${expression}}`).bind(scope)(globals, scope);
 
         } catch (err) {
 
@@ -219,17 +216,13 @@
 
                     const prop = opts.noTag ? match : match.substring(1, match.length - 1);
 
-                    const parentBinding = opts.vm._binding;
-
                     if (!binding.bound) {
 
                         opts.vm._binding = binding;
 
                     }
 
-                    value = evaluate(prop, opts.vm);
-
-                    opts.vm._binding = parentBinding;
+                    value = evaluate(prop, opts.vm, opts.globals);
 
                     const type = typeof value;
 
@@ -240,6 +233,10 @@
                     } else if (type === 'function') {
 
                         content = value;
+
+                    } else if (value instanceof Number || value instanceof String) {
+
+                        content = content.replace(match, value);
 
                     } else if (value === undefined || value === '_invalidExpression' || value === null) {
 
@@ -259,7 +256,7 @@
 
                     } else {
 
-                        content = content.replace(match, value.toString());
+                        content = content.replace(match, String(value));
 
                     }
 
@@ -284,18 +281,16 @@
      */
     function forEachAttribute(el, callback) {
 
-        const attributes = Array.from(el.attributes).filter(attribute => {
+        const attributes = Array.from(el.attributes)
+            .filter(attribute => attribute.specified)
+            .map(attribute => {
 
-            return attribute.specified && attribute.name !== 'as';
+                return {
+                    name: attribute.name,
+                    value: attribute.value
+                };
 
-        }).map(attribute => {
-
-            return {
-                name: attribute.name,
-                value: attribute.value
-            };
-
-        });
+            });
 
         attributes.forEach(attribute => {
 
@@ -317,13 +312,14 @@
     /*
      * Bind the given attribute to the given vm
      */
-    function bindAttribute(el, attribute, vm) {
+    function bindAttribute(el, attribute, vm, globals) {
 
         if (attribute.name === 'style' || attribute.name === 'data-style') {
 
             bind({
                 key: attribute.value,
                 vm,
+                globals,
                 replace: style => {
                     /*
                      * IE doesn't support setAttribute for styles
@@ -340,6 +336,7 @@
             bind({
                 key: attribute.value,
                 vm,
+                globals,
                 replace: src => {
 
                     el.setAttribute('src', src);
@@ -354,6 +351,7 @@
             bind({
                 key: attribute.value,
                 vm,
+                globals,
                 replace: value => {
                     /*
                      * Assume function values are event handlers
@@ -380,19 +378,17 @@
     /**
      * Checks all elements and attributes for template expressions
      */
-    function render(el, vm) {
+    function render(el, vm, globals) {
 
         let isLoop;
 
         forEachAttribute(el, attribute => {
 
-            if (attribute.name === 'loop' && el.attributes.as) {
+            if (attribute.name === 'loop') {
 
-                const key = attribute.value,
-                    prop = el.attributes.as.value;
+                const key = attribute.value;
 
                 el.removeAttribute('loop');
-                el.removeAttribute('as');
 
                 isLoop = true;
 
@@ -402,47 +398,74 @@
 
                     el.innerHTML = '';
 
-                    list.forEach((value, index) => {
+                    list.forEach((item, index) => {
 
                         const child = template.cloneNode();
 
                         child.innerHTML = template.innerHTML;
 
-                        el.appendChild(child);
-
                         function binding() {
-
-                            const parentBinding = vm._binding;
-
-                            if (!binding.bound) {
-
-                                list._binding = binding;
-
-                                vm._binding = binding;
-
-                            }
-
-                            const val = list[index];
-
-                            delete list._binding;
 
                             const newChild = template.cloneNode();
 
                             newChild.innerHTML = template.innerHTML;
 
-                            list[prop] = val;
+                            item = list[index];
 
-                            render(newChild, list);
+                            if (!binding.bound) {
 
-                            vm._binding = parentBinding;
+                                if (item) {
 
-                            delete list[prop];
+                                    item._binding = binding;
+
+                                }
+
+                                list._binding = binding;
+
+                                if (vm) {
+
+                                    vm._binding = binding;
+
+                                }
+
+                            }
+
+                            /**
+                             * If this item is not a vm,
+                             * trigger the parent vm's getter
+                             * to attach a binding
+                             */
+                            if (typeof item !== 'object' || item && !item._bound) {
+
+                                list[index] = list[index];
+
+                            }
+
+                            render(newChild, item, vm);
+
+                            if (item) {
+
+                                delete item._binding;
+
+                            }
+
+                            delete list._binding;
+
+                            if (vm) {
+
+                                delete vm._binding;
+
+                            }
+
+
 
                             el.replaceChild(newChild, el.children[index]);
 
                         }
 
-                        binding._vm = list;
+                        binding._vm = item;
+
+                        el.appendChild(child);
 
                         binding();
 
@@ -456,12 +479,13 @@
                     key,
                     vm,
                     replace,
+                    globals,
                     noTag: true
                 });
 
             } else {
 
-                bindAttribute(el, attribute, vm);
+                bindAttribute(el, attribute, vm, globals);
 
             }
 
@@ -482,6 +506,7 @@
                 bind({
                     key: child.textContent,
                     vm,
+                    globals,
                     replace: value => {
 
                         if (value.tagName || value._element) {
@@ -522,6 +547,7 @@
                     bind({
                         key: tag,
                         vm,
+                        globals,
                         replace: newChild => {
 
                             if (child.parentNode === el) {
@@ -538,7 +564,7 @@
 
                 } else {
 
-                    render(child, vm);
+                    render(child, vm, globals);
 
                 }
 
@@ -566,7 +592,7 @@
 
         } else {
 
-            if (!vm._gc) {
+            if (!vm._bound) {
 
                 vm = uav.model(vm);
 
