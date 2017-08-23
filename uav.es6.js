@@ -1,7 +1,18 @@
 (() => {
 
+    /**
+     * Any vm properties accessed while currentBinding
+     * is non-null will be associated with that binding.
+     */
+    let currentBinding;
+
+    /**
+     * These array methods will be wrapped to trigger renders of template loops.
+     */
+    const ARRAY_METHODS = ['concat', 'push', 'pop', 'shift', 'sort', 'splice', 'unshift'];
+
     /*
-     * Array.prototype.from shim for IE
+     * Array.prototype.from shim for IE.
      */
     if (!Array.from) {
 
@@ -14,8 +25,8 @@
     }
 
     /**
-     * Returns the first matched DOM node or executes
-     * a callback on all matched DOM nodes
+     * Returns the nth or first matched DOM node or executes
+     * a callback on all matched DOM nodes.
      */
     const uav = window.uav = (selector, fnOrIndex) => {
 
@@ -27,7 +38,7 @@
 
                 els.forEach(fnOrIndex);
 
-            } else if (typeof fnOrIndex === 'number') {
+            } else {
 
                 return els[fnOrIndex];
 
@@ -42,81 +53,115 @@
     };
 
     /**
-     * Turns an HTML string into an element
+     * Turns an HTML string into an element.
      */
-    function parse(markup) {
+    function parse(markup, parent) {
 
-        let el = document.createElement('div');
+        const el = parent ? parent.cloneNode() : document.createElement('div');
 
         el.innerHTML = markup;
 
         if (el.children.length > 1) {
 
-            console.error('Components must have only one root node.');
+            console.error('Components cannot have more than one root node', markup);
 
         }
 
-        el = el.firstElementChild;
+        return el.firstElementChild;
 
-        return el;
+    }
+
+    function isVmEligible(data) {
+
+        return data && typeof data === 'object' && !data.tagName;
 
     }
 
     /**
-     * Tests whether a value has properties that should be bound
+     * Turns an object into a vm if it is eligible.
      */
-    function isVmEligible(value) {
+    function maybeVM(data) {
 
-        return value && typeof value === 'object' && !value.tagName;
+        if (isVmEligible(data) && !data._bound) {
+
+            data = uav.model(data);
+
+        }
+
+        return data;
+
+    }
+
+    /**
+     * Wraps the given method of the given array so
+     * that will call the given setter after running.
+     */
+    function bindArrayMethod(method, data, set) {
+
+        data[method] = (...args) => {
+
+            Array.prototype[method].apply(data, args.map(maybeVM));
+
+            set(data);
+
+        };
+
+    }
+
+    /**
+     * Wraps a predefiend list of array methods
+     * on the given array so that they will 
+     * call the given setter after running.
+     */
+    function bindArrayMethods(data, set) {
+
+        ARRAY_METHODS.forEach(method => bindArrayMethod(method, data, set));
 
     }
 
     /**
      * Returns an object that will execute
-     * bindings when its properties are set
+     * bindings when its properties are changed.
      */
     uav.model = data => {
 
         const vm = Array.isArray(data) ? [] : {};
 
+        /**
+         * vm._bound stores references to all bindings on the vm.
+         * vm._bound._gc stores garbage collection callbacks that
+         * will run if this vm is overwritten.
+         */
         vm._bound = {
             _gc: []
         };
 
         Object.keys(data).forEach(key => {
 
-            vm[key] = data[key];
-
-            if (isVmEligible(data[key]) && !data[key]._bound) {
-
-                data[key] = uav.model(data[key], vm);
-
-            }
+            data[key] = maybeVM(data[key]);
 
             function get() {
-
-                const binding = vm._binding;
 
                 /**
                  * If a property is accessed during expression
                  * evaluation, that means it should be bound.
                  */
-                if (binding) {
+                if (currentBinding) {
 
                     vm._bound[key] = vm._bound[key] || [];
 
-                    vm._bound[key].push(binding);
+                    vm._bound[key].push(currentBinding);
 
                     /**
                      * If this binding isn't for a property of this vm,
-                     * Save a reference so that we can remove
-                     * the binding if the other vm is overwritten.
+                     * Save a closure that will remove the binding if
+                     * the other vm is overwritten.
                      */
-                    if (binding._vm !== vm && binding._vm._bound) {
+                    if (currentBinding._vm._bound && currentBinding._vm !== vm) {
 
-                        binding._vm._bound._gc.push(() => {
-
-                            const index = vm._bound[key].indexOf(binding);
+                        currentBinding._vm._bound._gc.push(() => {
+                            console.log('garbage collection! ', key);
+                            const index = vm._bound[key].indexOf(currentBinding);
 
                             vm._bound[key].splice(index, 1);
 
@@ -134,36 +179,44 @@
 
                 if (data[key] !== value || typeof value === 'object') {
 
-                    if (isVmEligible(value) && !value._bound) {
-
-                        value = uav.model(value, vm);
-
-                    }
+                    const previousBindings = data[key] && data[key]._bound;
 
                     /**
                      * If we're overwriting a child vm,
                      * run any garbage collection callbacks
                      * that we registered for it.
                      */
-                    if (data[key] && data[key]._bound) {
+                    if (previousBindings) {
 
-                        data[key]._bound._gc.forEach(fn => fn());
-
-                        delete data[key];
+                        previousBindings._gc.forEach(fn => fn());
 
                     }
+
+                    value = maybeVM(value);
+
+                    // if (Array.isArray(value)) {
+
+                    //     bindArrayMethods(value, set);
+
+                    // }
 
                     data[key] = value;
 
                     if (vm._bound[key]) {
 
-                        vm._bound[key].forEach(fn => fn());
+                        vm._bound[key].forEach(fn => fn(fn._vm));
 
                     }
 
                 }
 
             }
+
+            // if (Array.isArray(data[key])) {
+
+            //     bindArrayMethods(data[key], set);
+
+            // }
 
             Object.defineProperty(vm, key, {
                 get,
@@ -183,11 +236,11 @@
      * with the privileges or scope of the
      * surrounding execution context.
      */
-    function evaluate(expression, scope, globals) {
+    function evaluate(expression, vm, globals) {
 
         try {
 
-            return new Function('_g', '_s', `if(_g){_s=Object.assign({},_s,_g)}with(_s){return ${expression}}`).bind(scope)(globals, scope);
+            return new Function(`with(arguments[0]){return ${expression}}`).bind(vm)(globals || vm);
 
         } catch (err) {
 
@@ -207,7 +260,7 @@
 
         if (matches) {
 
-            function binding() {
+            function binding(vm) {
 
                 let value,
                     content = opts.key;
@@ -218,11 +271,13 @@
 
                     if (!binding.bound) {
 
-                        opts.vm._binding = binding;
+                        currentBinding = binding;
 
                     }
 
-                    value = evaluate(prop, opts.vm, opts.globals);
+                    value = evaluate(prop, vm, opts.globals);
+
+                    currentBinding = null;
 
                     const type = typeof value;
 
@@ -268,9 +323,9 @@
 
             binding._vm = opts.vm;
 
-            binding();
+            binding(opts.vm);
 
-            binding.bound = true;
+            //binding.bound = true;
 
         }
 
@@ -392,7 +447,7 @@
 
                 isLoop = true;
 
-                const template = parse(el.innerHTML);
+                const template = parse(el.innerHTML, el);
 
                 function replace(list) {
 
@@ -414,19 +469,7 @@
 
                             if (!binding.bound) {
 
-                                if (item) {
-
-                                    item._binding = binding;
-
-                                }
-
-                                list._binding = binding;
-
-                                if (vm) {
-
-                                    vm._binding = binding;
-
-                                }
+                                currentBinding = binding;
 
                             }
 
@@ -443,21 +486,7 @@
 
                             render(newChild, item, vm);
 
-                            if (item) {
-
-                                delete item._binding;
-
-                            }
-
-                            delete list._binding;
-
-                            if (vm) {
-
-                                delete vm._binding;
-
-                            }
-
-
+                            currentBinding = null;
 
                             el.replaceChild(newChild, el.children[index]);
 
@@ -469,7 +498,7 @@
 
                         binding();
 
-                        binding.bound = true;
+                        //binding.bound = true;
 
                     });
 

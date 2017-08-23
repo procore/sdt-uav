@@ -5,3 +5,5 @@
 - documentation
 - comments
 - need type protection now that VMs can be anything
+- gc not working or unnecessary
+- replacing an array loop causes bindings to be lost

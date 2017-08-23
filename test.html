@@ -8,30 +8,21 @@
 <script>
 const uav = window.uav;
 
-const model = uav.model({
-    text: 'foobar',
-    strings: ['string'],
-    objects: [{name: 'object'}],
-    click: char => () => model.text += char
-});
-
-const template = `
-<div>
-    {text}
-    <ul loop="strings">
-        <li onclick={click('s')}>{text} {this} {console.log(this)}</li>
-    </ul>
-    <ol loop="objects">
-        <li onclick={click('t')}>{text} {this.name} {console.log(this.name)}</li>
-    </ol>
-</div>`;
-
-uav.component({
-    list: uav.component(model, template)
+const component = uav.component({
+    event: {
+        click: () => console.log('click')
+    },
+    data: {
+        name: 'ben'
+    },
+    list: [1,2,3,4]
 }, `
 <div>
-    <h1>hello</h1>
-    test {list} test
+    <button onclick={event.click} class="{data.name}">{data.name}</button>
+    <ul loop="list">
+        <li onclick={event.click}>{this} {data.name}</li>
+    </ul>
+    {data.name}
 </div>
 `, '.app');
 </script>
