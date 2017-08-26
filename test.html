@@ -5,37 +5,59 @@
 <body>
 <div class="app"></div>
 <script src="uav.js"></script>
+<script src="uav.2way.js"></script>
 <script>
 const uav = window.uav;
 
 const c = uav.component({
-    event: {
-        click: () => console.log('click')
+    data: '1',
+    list: ['1'],
+    on: true,
+    toggle: () => {
+
+        c.on = !c.on;
+
     },
-    data: {
-        name: 'ben'
-    },
-    list: [1, 2, 3, 4]
+    test: val => val,
+    prop: {
+        name: 'test'
+    }
 }, `
-<div>
-    {list[0]}
-    <ul uav-loop="list">
-        <li>{this} {data.name}</li>
-    </ul>
-    <input type="text" uav-bind="{list[0]}"/>
-    <select uav-bind="{list[0]}">
+<form {prop.name} {on}>
+
+    <input type="text" uav-bind="data"/><br>
+
+    <textarea uav-bind="data"></textarea><br>
+
+    <select uav-bind="data">
         <option value="0">0</option>
         <option value="1">1</option>
         <option value="2">2</option>
         <option value="3">3</option>
         <option value="4">4</option>
-    </select>
-    <textarea uav-bind="list[0]"></textarea>
-    <form>
-        <input type="radio" uav-bind="{list[0]}">1
-        <input type="radio" uav-bind="{list[1]}">2
-    </form>
-</div>
+    </select><br>
+
+    <input type="radio" uav-bind="data" value="0" name="radio">0<br>
+    <input type="radio" uav-bind="data" value="1" name="radio">1<br>
+    <input type="radio" uav-bind="data" value="2" name="radio">2<br>
+    <input type="radio" uav-bind="data" value="3" name="radio">3<br>
+    <input type="radio" uav-bind="data" value="4" name="radio">4<br>
+
+    <input type="checkbox" uav-bind="list" value="0" name="checkbox">0<br>
+    <input type="checkbox" uav-bind="list" value="1" name="checkbox">1<br>
+    <input type="checkbox" uav-bind="list" value="2" name="checkbox">2<br>
+    <input type="checkbox" uav-bind="list" value="3" name="checkbox">3<br>
+    <input type="checkbox" uav-bind="list" value="4" name="checkbox">4<br>
+
+    <input type="password" uav-bind="data"/><br>
+
+    <input type="button" uav-bind="data"/><br>
+
+    <input type="reset" onclick={toggle}/><br>
+
+    <input type="submit" uav-bind="data"/><br>
+
+</form>
 `, '.app');
 </script>
 </body>

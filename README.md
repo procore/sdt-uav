@@ -1,12 +1,16 @@
-# UAV
+# uav
 
-UAV is a small JavaScript utility for templates with one-way data binding. 
-
-## Install
-
-`npm install uav`
+uav solves the same problems as frameworks like React and Vue, but it's only 2KB, and far easier to use.
 
 ## Example
+
+```javascript
+const component = uav.component(
+    {message: 'hello, world!'},
+    `<h1>{message}</h1>`,
+    '#app'
+);
+```
 
 [See a JSFiddle](http://jsfiddle.net/t16bzg3m/7/)
 

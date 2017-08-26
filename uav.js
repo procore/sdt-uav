@@ -1,198 +1,328 @@
-(() => {
+'use strict';
 
-    let currentBinding;
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
-    let currentNode;
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
-    let lastAccessed;
+(function () {
 
-    const ARRAY_METHODS = ['push', 'pop', 'reverse', 'shift', 'sort', 'splice', 'unshift'];
+    /**
+     * currentBinding tracks the binding which is currently executing.
+     *
+     * @type {Function}
+     */
+    var currentBinding = void 0;
 
-    const create = tag => document.createElement(tag);
+    /**
+     * currentNode tracks the DOM node which is currently being parsed.
+     *
+     * @type {Element}
+     */
+    var currentNode = void 0;
 
-    function bindArrayMethod(method, vm, set) {
+    /**
+     * attributes is a list of functions for handling element attributes.
+     * It can be extended with uav.attributes.push(<Function>) to support
+     * new attribute bindings (this is how uav.2way.js works).
+     *
+     * Attribute functions are passed the following parameters:
+     * - node: the element on which the attribute appears
+     * - attribute: an object with name and value properties
+     * - vm: the view model against which attribute expressions should be evaluated
+     * - globals: the parent view model, if node is within a template loop
+     * 
+     * @type {Array}
+     */
+    var attributes = [];
 
-        Object.defineProperty(vm, method, {
-            value: (...args) => {
+    /**
+     * ARRAY_METHODS is a list of array methods that alter arrays in place.
+     * These methods are wrapped to trigger bindings.
+     * 
+     * @type {Array}
+     */
+    var ARRAY_METHODS = ['push', 'pop', 'reverse', 'shift', 'sort', 'splice', 'unshift'];
 
-                Array.prototype[method].apply(vm, args);
+    /**
+     * INVALID_EXPRESSION is used to flag template expressions
+     * that throw exceptions.
+     * 
+     * @type {String}
+     */
+    var INVALID_EXPRESSION = '_u_badexp';
 
-                set([...vm]);
+    /**
+     * createElement wraps document.createElement. 
+     * This is just to remove a few bytes in minified scripts.
+     * 
+     * @param  {String} tag - The type of element to create
+     * @return {Element}
+     */
+    var createElement = function createElement(tag) {
+        return document.createElement(tag);
+    };
 
-            },
+    /**
+     * defineProp adds a non-enumerable property to an object.
+     * 
+     * @param  {Object} vm - the object on which to define the property
+     * @param  {String} prop - the property name
+     * @param  {any} value - the property value
+     * @return {Object}
+     */
+    var defineProp = function defineProp(vm, prop, value) {
+        return Object.defineProperty(vm, prop, {
+            value: value,
+            configurable: true,
+            writable: true,
             enumerable: false
         });
+    };
 
+    /**
+     * bindArrayMethod wraps the given method of the given array
+     * so that it will trigger bindings.
+     * 
+     * @param  {String} method - the name of the method to wrap
+     * @param  {Array} vm - the array on which to operate
+     * @param  {Function} set - the vm's setter descriptor
+     * @return {undefined}
+     */
+    function bindArrayMethod(method, vm, set) {
+
+        defineProp(vm, method, function () {
+            for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+                args[_key] = arguments[_key];
+            }
+
+            Array.prototype[method].apply(vm, args);
+
+            set([].concat(_toConsumableArray(vm)));
+        });
     }
 
-    function bindArrayMethods(data, set) {
+    /**
+     * bindArrayMethods wraps a predefined list of array methods
+     * (ARRAY_METHODS) so that they will trigger bindings when called.
+     * 
+     * @param  {Array} vm - the array on which to operate
+     * @param  {Function} set - the vm's setter descriptor
+     * @return {undefined}
+     */
+    function bindArrayMethods(vm, set) {
 
-        ARRAY_METHODS.forEach(method => bindArrayMethod(method, data, set));
-
+        ARRAY_METHODS.forEach(function (method) {
+            return bindArrayMethod(method, vm, set);
+        });
     }
 
-    const uav = window.uav = (selector, fnOrIndex) => {
+    /**
+     * uav is a global utility for selecting DOM nodes using a CSS selector.
+     * - act on the first matched element:  uav('#item').classList.add('active');
+     * - act on all matched elements:       uav('.items', el => el.classList.add('active'));
+     * - act on the nth matched element:    uav('.items', 2).classList.add('active'));
+     * 
+     * @param  {String} selector - the CSS selector to search for
+     * @param  {(Function|Number)} fnOrIndex (optional)
+     *          - a callback, passed all matched nodes, OR
+     *          - the index of the matched node to return.
+     * @return {(Array|Element)}
+     */
+    var uav = window.uav = function (selector, fnOrIndex) {
 
         if (fnOrIndex !== undefined) {
 
-            const els = Array.from(document.querySelectorAll(selector));
+            var els = Array.from(document.querySelectorAll(selector));
 
             if (typeof fnOrIndex === 'function') {
 
                 els.forEach(fnOrIndex);
-
             } else if (typeof fnOrIndex === 'number') {
 
                 return els[fnOrIndex];
-
             }
-
         } else {
 
-            return document.querySelector(selector) || create('div');
-
+            return document.querySelector(selector) || createElement('div');
         }
-
     };
 
+    /**
+     * setTag sets uav's template syntax. Because the tags
+     * are embedded in a regular expression, it may be
+     * necessary to escape special characters.
+     * 
+     * @param {String} open - the opening tag
+     * @param {String} close - the closing tag
+     */
+    function setTag(open, close) {
+
+        uav.tagRX = new RegExp('(^' + open + '|' + close + '$)', 'g');
+
+        uav.expRX = new RegExp('(' + open + '.*?' + close + ')', 'g');
+    }
+
+    /**
+     * Set the default template tags.
+     */
+    setTag('{', '}');
+
+    /**
+     * parse converts an HTML string into a DOM node. The HTML must
+     * contain one root node. A parent node may be supplied to
+     * support parsing elements like <tr> and <option>, which
+     * can only be children of specific HTML elements.
+     * 
+     * @param  {String} markup - the HTML string to parse
+     * @param  {Element} parent - the node into which this HTML will be inserted (optional)
+     * @return {Element}
+     */
     function parse(markup, parent) {
 
-        const el = parent ? parent.cloneNode() : create('div');
+        var el = parent ? parent.cloneNode() : createElement('div');
 
         el.innerHTML = markup;
 
         if (el.children.length > 1) {
 
-            console.error('Components must have only one root node.');
-
+            console.error('Only 1 root node allowed.');
         }
 
         return el.firstElementChild;
-
     }
 
+    /**
+     * Evaluates a template expression with the supplied context(s).
+     * Unlike eval(), this does not provide access to execution context
+     * from within template expressions. 
+     * 
+     * @param  {String} expression - the expression to evaluate
+     * @param  {any} vm - the scope in which to evaluate, and the value of this
+     * @param  {Globals} - the scope in which to evaluate if vm is not an object (optional)
+     * @return {any}
+     */
     function evaluate(expression, vm, globals) {
 
         try {
 
-            return new Function(`with(arguments[0]){return ${expression}}`).bind(vm)(globals || vm);
-
+            return new Function('with(arguments[0]){return ' + expression + '}').bind(vm)(globals || vm);
         } catch (err) {
 
-            return '_invalidExpression';
-
+            return INVALID_EXPRESSION;
         }
-
     }
 
+    /**
+     * Recursively removes all bindings associated with
+     * the provided DOM node.
+     * 
+     * @param  {Element} node - the node to unbind
+     * @return {undefined}
+     */
     function unbind(node) {
 
-        if (node && node._gc) {
+        if (node && node._uav) {
 
-            [...node.children].forEach(unbind);
+            [].concat(_toConsumableArray(node.children)).forEach(unbind);
 
-            node._gc.forEach(fn => fn());
-
-            delete node._gc;
+            node._uav.forEach(function (fn) {
+                return fn();
+            });
 
             node = null;
-
         }
-
     }
 
-    const removeCurlies = str => str.replace(/(^{|}$)/g, '');
+    /**
+     * Remove template tags from the given expression, if any.
+     * 
+     * @param  {String} str - the string to remove tags from
+     * @return {String}
+     */
+    var stripTags = function stripTags(str) {
+        return str.replace(uav.tagRX, '');
+    };
 
-    function bind(opts) {
+    /**
+     * Checks to see if a template contains expressions. If so, binds them
+     * to a view model so that any changes to the relevant properties will
+     * trigger the binding.
+     * 
+     * @param  {Object} opts - binding options, as follows:
+     *          {
+     *              tmpl   : {string} the template string to check
+     *              single : {boolean} this template is guaranteed to have one expression
+     *              replace: {function} handles in-progress template evaluations
+     *              commit : {function} handles completed template evaluations
+     *          }
+     *
+     * @param  {Object} vm - the view model for the expression
+     * @param  {Object} globals - the parent view model (optional)
+     * @return {undefined}
+     */
+    function bind(opts, vm, globals) {
 
-        const expressions = opts.single ? [opts.tmpl] : opts.tmpl.match(/{.*?}/g);
+        var expressions = opts.single ? [opts.tmpl] : opts.tmpl.match(uav.expRX);
 
         if (expressions) {
+            var binding = function binding(doBind) {
 
-            function binding(doBind) {
+                expressions.forEach(function (expression) {
 
-                let result = opts.tmpl;
-
-                expressions.forEach(expression => {
-
-                    const code = removeCurlies(expression);
+                    var code = stripTags(expression);
 
                     if (doBind) {
 
                         currentBinding = binding;
-
                     }
 
-                    const value = evaluate(code, opts.vm, opts.globals);
+                    var value = evaluate(code, vm, globals);
 
                     currentBinding = null;
 
+                    if (typeof value === 'boolean') {
 
+                        value = value ? code : '';
+                    } else if (value === undefined || value === null || value === INVALID_EXPRESSION) {
 
-                    const type = typeof value;
-
-                    if (type === 'boolean') {
-
-                        result = result.replace(expression, value ? code : '');
-                    
-                    } else if (type === 'function' || value instanceof Function) {
-
-                        result = value;
-
-                    } else if (value === undefined || value === '_invalidExpression' || value === null) {
-
-                        result = result.replace(expression, '');
-
-                    } else if (type === 'number' || type === 'string' || value instanceof Number || value instanceof String) {
-
-                        result = result.replace(expression, value);
-
-                    } else if (type === 'object' || value instanceof Object) {
-
-                        if (value._element) {
-
-                            result = value._element;
-
-                        } else {
-
-                            result = value;
-
-                        }
-
-                    } else {
-
-                        result = result.replace(expression, value);
-
+                        value = '';
                     }
 
+                    opts.replace(value, expression);
                 });
 
-                opts.replace(result);
+                if (opts.commit) {
 
-            }
+                    opts.commit();
+                }
+            };
 
             binding(true);
-
-            return binding;
-
         }
-
     }
 
+    /**
+     * Run the given callback with each attribute on the given node.
+     * 
+     * @param  {Element} el - the node to check
+     * @param  {Function} callback - passed each attribute
+     * @return {undefined}
+     */
     function forEachAttribute(el, callback) {
 
-        const attributes = Array.from(el.attributes)
-            .filter(attribute => attribute.specified)
-            .map(attribute => {
+        var attrs = Array.from(el.attributes).filter(function (attribute) {
+            return attribute.specified;
+        }).map(function (attribute) {
 
-                return {
-                    name: attribute.name,
-                    value: attribute.value
-                };
+            return {
+                name: attribute.name,
+                value: attribute.value
+            };
+        });
 
-            });
-
-        attributes.forEach(attribute => callback(attribute));
+        attrs.forEach(function (attribute) {
+            return callback(attribute);
+        });
 
         if (el.value) {
 
@@ -200,329 +330,444 @@
                 name: 'value',
                 value: el.value
             });
-
         }
-
     }
 
-    function bindLoop(node, attribute, vm, globals) {
-
-        const loopNode = parse(node.innerHTML, node);
-
-        bind({
-            tmpl: attribute.value,
-            vm,
-            globals,
-            single: true,
-            replace: list => {
-
-                list = model(list);
-
-                [...node.children].forEach(unbind);
-
-                node.innerHTML = '';
-
-                list.forEach((item, i) => {
-
-                    function listBinding(doBind) {
-
-                        const child = loopNode.cloneNode();
-
-                        child.innerHTML = loopNode.innerHTML;
-
-                        if (doBind) {
-
-                            currentBinding = listBinding;
-
-                        }
-
-                        if (node.children[i]) {
-
-                            node.replaceChild(render(child, list[i], vm), node.children[i]);
-
-                        } else {
-
-                            node.appendChild(render(child, list[i], vm));
-
-                        }
-
-                        currentBinding = null;
-
-                    }
-
-                    listBinding(true);
-
-                });
-
-            }
-        });
-
-    }
-
-    function bindAttribute(node, attribute, vm, globals) {
+    /**
+     * Template loops:
+     *
+     * Adds an attribute binding that checks for the attribute
+     * "uav-loop". If found, it repeats the given node's 
+     * inner HTML for each item in the array denoted by the
+     * attribute's value. Creates individual bindings for
+     * each index of the array so that the whole loop doesn't
+     * have to be re-rendered when one item changes.
+     */
+    attributes.push(function (node, attribute, vm) {
 
         if (attribute.name === 'uav-loop') {
 
-            bindLoop(node, attribute, vm, globals);
+            var loopNode = parse(node.innerHTML, node);
 
-            return true;
-
-        } else if (attribute.name === 'style' || attribute.name === 'uav-style') {
-
-            bind({
+            return {
+                loop: true,
                 tmpl: attribute.value,
-                vm,
-                globals,
-                replace: style => {
+                single: true,
+                replace: function replace(list) {
+
+                    list = model(list);
+
+                    [].concat(_toConsumableArray(node.children)).forEach(unbind);
+
+                    node.innerHTML = '';
+
+                    list.forEach(function (item, i) {
+
+                        function listBinding(doBind) {
+
+                            var child = loopNode.cloneNode();
+
+                            child.innerHTML = loopNode.innerHTML;
+
+                            if (doBind) {
+
+                                currentBinding = listBinding;
+                            }
+
+                            var index = vm._index;
+
+                            vm._index = i;
+
+                            if (node.children[i]) {
+
+                                node.replaceChild(render(child, list[i], vm), node.children[i]);
+                            } else {
+
+                                node.appendChild(render(child, list[i], vm));
+                            }
+
+                            vm._index = index;
+
+                            currentBinding = null;
+                        }
+
+                        listBinding(true);
+                    });
+                }
+            };
+        }
+    });
+
+    /**
+     * Style attributes:
+     *
+     * Some IE versions only allow valid CSS in style attributes,
+     * meaning that template expressions need to be transferred from a
+     * "uav-stye" attribute to the "style" attribute after binding.
+     */
+    attributes.push(function (node, attribute) {
+
+        if (attribute.name === 'style' || attribute.name === 'uav-style') {
+
+            var tmpl = attribute.value;
+
+            var style = tmpl;
+
+            return {
+                tmpl: tmpl,
+                replace: function replace(value, expression) {
+
+                    style = style.replace(expression, value);
+                },
+                commit: function commit() {
 
                     node.style.cssText = style;
 
+                    style = tmpl;
                 }
-            });
+            };
+        }
+    });
 
-            node.removeAttribute('uav-style');
+    /**
+     * Source attributes:
+     * 
+     * A template expression like the following would result in a 404:
+     * <img src="https://example.com/{pageId}"/>
+     *
+     * To avoid setting the src attribute until the expression is 
+     * evaluated, use the "uav-src" attribute instead.
+     */
+    attributes.push(function (node, attribute) {
 
-        } else if (attribute.name === 'uav-src') {
+        if (attribute.name === 'uav-src') {
 
-            bind({
-                tmpl: attribute.value,
-                vm,
-                globals,
-                replace: src => {
+            var tmpl = attribute.value;
 
-                    node.setAttribute('src', src);
+            var source = tmpl;
 
+            return {
+                tmpl: tmpl,
+                replace: function replace(value, expression) {
+
+                    source = source.replace(expression, value);
+                },
+                commit: function commit() {
+
+                    node.setAttribute('src', source);
+
+                    source = tmpl;
                 }
-            });
+            };
+        }
+    });
 
-            node.removeAttribute('uav-src');
+    /**
+     * Boolean attributes:
+     *
+     * This binding handles valueless attributes like <input {disabled}/>.
+     * While it makes most sense to bind these to boolean values,
+     * it supports binding them to strings as well.
+     */
+    attributes.push(function (node, attribute) {
 
-        } else if (attribute.name === 'uav-bind') {
+        if (attribute.name.match(uav.expRX)) {
 
-            node.addEventListener('input', () => {
+            var property = void 0;
 
-                evaluate(removeCurlies(attribute.value), vm, globals);
+            return {
+                tmpl: attribute.name,
+                replace: function replace(value) {
 
-                lastAccessed.vm[lastAccessed.key] = node.value;
+                    if (property) {
 
-                lastAccessed = null;
-
-            });
-
-            bind({
-                tmpl: attribute.value,
-                vm,
-                globals,
-                single: true,
-                replace: value => {
-
-                    node.value = value;
-
-                }
-            });
-
-        } else {
-
-            bind({
-                tmpl: attribute.value,
-                vm,
-                globals,
-                replace: value => {
-
-                    if (typeof value === 'function') {
-
-                        node.removeAttribute(attribute.name);
-
-                        node[attribute.name] = value;
-
-                    } else {
-
-                        node.setAttribute(attribute.name, value);
-
+                        node.removeAttribute(property);
                     }
 
+                    if (value) {
+
+                        node.setAttribute(value, '');
+
+                        property = value;
+                    }
                 }
-            });
-
+            };
         }
+    });
 
+    /**
+     * All other attributes:
+     *
+     * Any other attributes containing template expressions
+     * are handled here. Expressions which evaluate to functions
+     * are treated as event handlers.
+     */
+    function defaultAttributeCheck(node, attribute) {
+
+        var tmpl = attribute.value;
+
+        var result = tmpl;
+
+        return {
+            tmpl: tmpl,
+            replace: function replace(value, expression) {
+
+                if (typeof value === 'function') {
+
+                    result = value;
+                } else {
+
+                    result = result.replace(expression, value);
+                }
+            },
+            commit: function commit() {
+
+                if (typeof result === 'function') {
+
+                    node[attribute.name] = result;
+                } else {
+
+                    node.setAttribute(attribute.name, result);
+                }
+
+                result = tmpl;
+            }
+        };
     }
 
+    /**
+     * bindAttribute runs an attribute through all of the
+     * defined attribute binding functions.
+     * 
+     * @param  {Element} node - the owner of the attribute 
+     * @param  {Object} attribute - an object with name and value properties
+     * @param  {Object} vm - the current view model
+     * @param  {Object} globals - the parent view model (optional)
+     * @return {Boolean} isLoop - indicates whether the node contains a template loop
+     */
+    function bindAttribute(node, attribute, vm, globals) {
+
+        var isLoop = void 0;
+
+        for (var i = 0; i < attributes.length; i++) {
+
+            var opts = attributes[i](node, attribute, vm, globals);
+
+            if (opts) {
+
+                node.removeAttribute(attribute.name);
+
+                bind(opts, vm, globals);
+
+                if (opts.loop) {
+
+                    isLoop = true;
+                }
+            }
+        }
+
+        bind(defaultAttributeCheck(node, attribute), vm, globals);
+
+        return isLoop;
+    }
+
+    /**
+     * bindTextNode creates a binding for the given text node.
+     * 
+     * @param  {Element} node - the text node to parse
+     * @param  {Object} vm - the current view model
+     * @param  {Object} globals - the parent view model (optional)
+     * @return {undefined}
+     */
     function bindTextNode(node, vm, globals) {
 
         bind({
             tmpl: node.textContent,
-            vm,
-            globals,
-            replace: value => {
+            replace: function replace(value) {
 
-                if (value.tagName || value._element) {
+                if (value.tagName || value._el) {
 
-                    const newNode = value._element ? value._element : value;
+                    var newNode = value._el ? value._el : value;
 
                     if (newNode !== node) {
 
                         unbind(node);
-
                     }
 
-                    node.parentNode.replaceChild(newNode, node);
+                    if (node.parentNode) {
 
-                    node = value;
+                        node.parentNode.replaceChild(newNode, node);
 
+                        node = newNode;
+                    }
                 } else {
 
                     try {
 
                         node.textContent = value;
-
                     } catch (e) {
 
                         node.innerHTML = '';
                     }
-
                 }
+            }
+        }, vm, globals);
+    }
 
+    /**
+     * If a text node contains template expressions,
+     * explodeTextNode creates an individual text node
+     * for each expression (for effecient updates later).
+     * 
+     * @param  {Element} node - the starting text node
+     * @param  {Object} vm - the current view model
+     * @param  {Object} globals - the parent view model (optional)
+     * @return {undefined}
+     */
+    function explodeTextNode(node, vm, globals) {
+
+        var parts = node.textContent.split(uav.expRX);
+
+        var parent = node.parentNode;
+
+        var lastNode = node;
+
+        parts.forEach(function (part) {
+
+            if (part) {
+
+                var newNode = document.createTextNode(part);
+
+                parent.insertBefore(newNode, lastNode.nextSibling);
+
+                bindTextNode(newNode, vm, globals);
+
+                lastNode = newNode;
             }
         });
 
+        parent.removeChild(node);
     }
 
-    function bindElementNode(parent, node, vm, globals) {
-
-        const tag = node.tagName.toLowerCase();
-
-        if (vm[tag] !== undefined && vm[tag]._element) {
-
-            bind({
-                tmpl: tag,
-                vm,
-                globals,
-                single: true,
-                replace: newNode => {
-
-                    if (node.parentNode === parent) {
-
-                        if (newNode !== node) {
-
-                            unbind(node);
-
-                        }
-
-                        node.parentNode.replaceChild(newNode, node);
-
-                        node = newNode;
-
-                    }
-
-                }
-            });
-
-        } else {
-
-            render(node, vm, globals);
-
-        }
-
-    }
-
+    /**
+     * Recursively checks an element's attributes and children
+     * for template expressions.
+     * 
+     * @param  {Element} node - the node to parse
+     * @param  {Object} vm - the current view model
+     * @param  {Object} globals - the parent view model (optional)
+     * @return {Element}
+     */
     function render(node, vm, globals) {
 
-        let isLoop;
+        var isLoop = void 0;
 
         currentNode = node;
 
-        Object.defineProperty(currentNode, '_gc', {
-            value: [],
-            writable: true,
-            enumerable: false
-        });
+        defineProp(currentNode, '_uav', []);
 
-        forEachAttribute(node, attribute => {
+        forEachAttribute(node, function (attribute) {
 
             if (bindAttribute(node, attribute, vm, globals)) {
 
                 isLoop = true;
-
             }
-
         });
 
         if (isLoop) {
 
             return node;
-
         }
 
-        Array.from(node.childNodes).forEach(child => {
+        Array.from(node.childNodes).forEach(function (child) {
 
             if (child.nodeType === 3) {
 
-                bindTextNode(child, vm, globals); 
-            
+                explodeTextNode(child, vm, globals);
             } else {
 
-                bindElementNode(node, child, vm, globals);
-
+                render(child, vm, globals);
             }
-
         });
 
         return node;
-
     }
 
+    /**
+     * Determines whether an object is eligible for use as a view model.
+     * 
+     * @param  {any} data
+     * @return {Boolean}
+     */
     function isVmEligible(data) {
 
-        return !(!data || typeof data !== 'object' || data.tagName || data._bound);
-
+        return !(!data || (typeof data === 'undefined' ? 'undefined' : _typeof(data)) !== 'object' || data._uav || data.tagName);
     }
 
+    /**
+     * For use as a placeholder for a child component.
+     * 
+     * @param  {String} tag - the type of element to create (optional)
+     * @return {Object}
+     */
     function placeholder(tag) {
 
         return {
-            _element: create(tag || 'div')
+            _el: createElement(tag || 'div')
         };
-
     }
 
+    /**
+     * When a view model is replaced, we need to recursively
+     * copy all of its bindings to the new model.
+     * 
+     * @param  {Object} from - the old view model
+     * @param  {Object} to - the new view model
+     * @return {undefined}
+     */
     function copyBindings(from, to) {
 
-        if (from._bound && to) {
+        if (from._uav && to) {
 
-            Object.keys(from).forEach(key => {
+            Object.keys(from).forEach(function (key) {
 
                 copyBindings(from[key], to[key]);
-
             });
 
-            to._bound = from._bound;
+            to._uav = from._uav;
 
             from = null;
-
         }
-
     }
 
+    /**
+     * If the given object is eligible to be a view model,
+     * add getters and setters to its properties.
+     * 
+     * @param  {any} data - the source for the model
+     * @return {any}
+     */
     function model(data) {
 
         if (!isVmEligible(data)) {
 
             return data;
-
         }
 
-        const vm = Array.isArray(data) ? [] : {};
+        var vm = Array.isArray(data) ? [] : {};
 
-        Object.defineProperty(vm, '_bound', {
-            value: {},
-            configurable: true,
-            writable: true,
-            enumerable: false
-        });
+        /**
+         * The hidden _uav property contains all
+         * of the view model's bindings.
+         */
+        defineProp(vm, '_uav', {});
 
-        Object.keys(data).forEach(key => {
+        Object.keys(data).forEach(function (key) {
 
+            /**
+             * The processValue helper adds getters
+             * and setters for all children of the vm.
+             */
             function processValue(value) {
 
                 if (isVmEligible(value)) {
@@ -532,152 +777,177 @@
                     if (Array.isArray(value)) {
 
                         bindArrayMethods(value, set);
-
                     }
-
                 }
 
                 return value;
-
             }
 
+            /**
+             * If a property is accessed during evaluation of
+             * a template expression, then it should be bound.
+             */
             function get() {
 
                 if (currentBinding) {
 
-                    let binding = currentBinding;
+                    /**
+                     * Associate the binding with this property.
+                     */
+                    var binding = currentBinding;
 
-                    vm._bound[key] = vm._bound[key] || [];
+                    vm._uav[key] = vm._uav[key] || [];
 
-                    vm._bound[key].push(binding);
+                    vm._uav[key].push(binding);
 
-                    currentNode._gc.push(() => {
+                    /**
+                     * Store a closure that will remove this binding
+                     * If the node is removed or replaced later.
+                     */
+                    currentNode._uav.push(function () {
 
-                        console.info('>>> unbinding ' + key);
+                        var index = vm._uav[key].indexOf(binding);
 
-                        const index = vm._bound[key].indexOf(binding);
-
-                        vm._bound[key].splice(index, 1);
+                        vm._uav[key].splice(index, 1);
 
                         binding = null;
-
                     });
-
                 }
 
-                lastAccessed = {vm, key};
+                /**
+                 * Keeping track of the last accessed property
+                 * is necessary for two-way binding.
+                 */
+                uav.lastAccessed = { vm: vm, key: key };
 
                 return data[key];
-
             }
 
+            /**
+             * Handle changes to a property on the model.
+             */
             function set(value) {
 
-                if (data[key] !== value || typeof value === 'object') {
+                if (data[key] !== value || (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object') {
 
+                    /**
+                     * If the new value is eligible for use as a vm,
+                     * recursively add getters and setters.
+                     */
                     if (isVmEligible(value)) {
 
                         value = processValue(value);
 
-                        if (data[key] && data[key]._bound) {
+                        /**
+                         * Copy over any bindings from the previous value
+                         */
+                        if (data[key] && data[key]._uav) {
 
                             copyBindings(data[key], value);
-
                         }
-
-                        data[key] = value;
-
-                    } else {
-
-                        data[key] = value;
-
                     }
 
-                    if (vm._bound[key]) {
+                    /**
+                     * Store the new value.
+                     */
+                    data[key] = value;
 
-                        console.info('executing ' + vm._bound[key].length +  ' bindings for ' + key);
+                    /**
+                     * Run any bindings to this property.
+                     */
+                    if (vm._uav[key]) {
 
-                        vm._bound[key].forEach(fn => fn());
-
+                        vm._uav[key].forEach(function (fn) {
+                            return fn();
+                        });
                     }
-
                 }
-
             }
 
-            data[key] = processValue(data[key]);
+            data[key] = processValue(data[key] ? data[key].valueOf() : data[key]);
 
             Object.defineProperty(vm, key, {
-                get,
-                set,
+                get: get,
+                set: set,
                 enumerable: true,
                 configurable: true
             });
-
         });
 
         return vm;
-
     }
 
+    /**
+     * Creates a component for the given model and template.
+     * Renders the component into the specified element, if any.
+     * 
+     * @param  {Object} vm - the data for the component's view model (optional)
+     * @param  {String} tmpl - the component's HTML template
+     * @param  {String} selector - the CSS selector for the node in 
+     *          which to render the component (optional)
+     * @return {Object} vm
+     */
     function component(vm, tmpl, selector) {
 
         if (typeof vm === 'string') {
 
-            vm = {_element: parse(vm)};
+            vm = { _el: parse(vm) };
 
             selector = tmpl;
-
         } else {
 
             vm = model(vm);
 
-            vm._element = render(parse(tmpl), vm);
-
+            vm._el = render(parse(tmpl), vm);
         }
 
         if (typeof selector === 'string') {
 
-            const app = uav(selector);
+            var app = uav(selector);
 
-            const oldComponent = app.firstChild;
+            var oldComponent = app.firstElementChild;
 
-            requestAnimationFrame(() => unbind(oldComponent));
+            requestAnimationFrame(function () {
+                return unbind(oldComponent);
+            });
 
             app.innerHTML = '';
 
-            app.appendChild(vm._element);
-
+            app.appendChild(vm._el);
         }
 
-        for (let i = 0; i < arguments.length; i++) {
-            
+        for (var i = 0; i < arguments.length; i++) {
+
             if (typeof arguments[i] === 'function') {
 
-                requestAnimationFrame(() => arguments[i](vm._element));
+                arguments[i](vm._el);
 
                 break;
-
             }
-
         }
 
         return vm;
-
     }
 
-    uav.placeholder = placeholder;
+    /**
+     * Methods intended primarily for internal use
+     */
+    uav.attributes = attributes;
+    uav.evaluate = evaluate;
+    uav.stripTags = stripTags;
 
-    uav.unbind = unbind;
-
-    uav.model = model;
-
+    /**
+     * Methods intended for public use
+     */
     uav.component = component;
+    uav.model = model;
+    uav.parse = parse;
+    uav.placeholder = placeholder;
+    uav.setTag = setTag;
+    uav.unbind = unbind;
 
     if (typeof module !== 'undefined' && module.exports) {
 
         module.exports = uav;
-
     }
-
 })();

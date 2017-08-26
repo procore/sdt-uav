@@ -1,10 +1,11 @@
-- putting a dom element or component within in a text node results in the whole text node being replaced
-- text nodes are inefficient. split them up before binding them and replace each expression individually
+- nested loops
+- test two way binding on all input types
+- batch updates / async rendering
+
 - test.html should be removed
 - documentation
 - comments
-- optimize binding type checks
 - remove console logs
 - setting a deep object property can cause extra bindings to run
 - github page
-- test two way binding on all input types
+
