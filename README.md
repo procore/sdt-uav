@@ -26,7 +26,7 @@ Returns: The model.
 const component = uav.component({text: 'hi!'}, '<h1>{text}</h1>', '#app');
 ```
 
-After creating a component, any changes to the model will trigger an optimized re-render. Only the smallest DOM change possible will occur, down to the level of updating a single element attribute or text node.
+Any changes to a component's model will trigger an optimized re-render. Only the smallest DOM change possible will occur, down to the level of updating a single element attribute or text node. This is accomplished without any DOM diffing, because uav constructs a tree of closures that remember exactly what needs to be updated whenever a given property is changed.
 
 ### `uav.model`
 
@@ -54,21 +54,38 @@ UAV expressions use `{curly}` notation. Any valid javascript can be used in an e
 
 If an attribute expression evaluates to a boolean, it will render nothing if false, or the property name if true. This makes toggling the "visible" class on the above `<div>` as easy as `model.visble = !model.visible`.
 
-Event expression:
-```javascript
-`<div onclick="{click}"></div>`
-```
+### Loops
 
-Any template expression which evaluates to a function is assumed to be an event handler, and will be passed the event object.
+Add the `loop` attribute to an element to repeat its content for each item in an array. Within the loop, reference the current value with `this`.
 
 Array loop expression:
 ```javascript
-`<ul loop="items" as="item">
-    <li>{item}</li>
+`<ul loop="items">
+    <li>{this.name}</li>
 </ul>`
 ```
 
-Add the `loop` and `as` attributes to an element to repeat its content for each item in an array.
+### Events
+
+Any template expression which evaluates to a function is assumed to be an event handler, and will be passed the event object.
+
+Event expression:
+```javascript
+`<div onclick={click}></div>`
+```
+
+You can pass data to event handlers like this:
+
+```
+uav.component({
+    click: item => e => console.log(item)
+    items: ['foo', 'bar', 'baz']
+}, `
+    <ul loop="items">
+        <li onclick={click(this)}> {this} </li>
+    </ul>
+`)
+```
 
 ## Child Components
 
@@ -159,6 +176,29 @@ Access all matched elements by passing a callback:
 Access the nth matched element:
 
 `uav('.item', 3).classList.toggle('visible');`
+
+## Performance Notes
+
+### Only bind data when you have to
+
+Avoid putting any data on the model that doesn't need to be bound to HTML. If a particular value will never change, or changes to it don't need to update the DOM, just use a regular ES6 template variable to reference it (put a dollar sign in front of the expression).
+
+```
+const wontChange = 'hi!';
+
+uav.component({
+    willChange: 'loading...'
+}, `
+    <div>
+        <p>${wontChange}</p>
+        <p>{willChange}</p>
+    </div>
+`)
+```
+
+### Unbind any DOM nodes you've manually detached
+
+When uav updates the DOM as a result of a change to a model, it automatically removes any bindings to DOM nodes that have been replaced. However, if for some reason you manually remove or replace a bound DOM node, you can clean up any bindings to it with `uav.unbind(<Element>)`.
 
 ## Collapsing Whitespace
 

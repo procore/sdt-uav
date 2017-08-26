@@ -4,25 +4,24 @@
 </head>
 <body>
 <div class="app"></div>
-<script src="uav.es6.js"></script>
+<script src="uav.es6.3.js"></script>
 <script>
 const uav = window.uav;
 
-const component = uav.component({
+const c = uav.component({
     event: {
         click: () => console.log('click')
     },
     data: {
         name: 'ben'
     },
-    list: [1,2,3,4]
+    list: [1, 2, 3, 4]
 }, `
 <div>
-    <button onclick={event.click} class="{data.name}">{data.name}</button>
-    <ul loop="list">
-        <li onclick={event.click}>{this} {data.name}</li>
-    </ul>
     {data.name}
+    <ul loop="list">
+        <li>{this} {data.name}</li>
+    </ul>
 </div>
 `, '.app');
 </script>
