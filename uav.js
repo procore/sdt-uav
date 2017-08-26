@@ -4,6 +4,8 @@
 
     let currentNode;
 
+    let lastAccessed;
+
     const ARRAY_METHODS = ['push', 'pop', 'reverse', 'shift', 'sort', 'splice', 'unshift'];
 
     const create = tag => document.createElement(tag);
@@ -91,7 +93,7 @@
 
             node._gc.forEach(fn => fn());
 
-            node._gc = [];
+            delete node._gc;
 
             node = null;
 
@@ -99,19 +101,21 @@
 
     }
 
+    const removeCurlies = str => str.replace(/(^{|}$)/g, '');
+
     function bind(opts) {
 
-        const expressions = opts.noCurlyBraces ? [opts.template] : opts.template.match(/{.*?}/g);
+        const expressions = opts.single ? [opts.tmpl] : opts.tmpl.match(/{.*?}/g);
 
         if (expressions) {
 
             function binding(doBind) {
 
-                let result = opts.template;
+                let result = opts.tmpl;
 
                 expressions.forEach(expression => {
 
-                    const code = opts.noCurlyBraces ? expression : expression.substring(1, expression.length - 1);
+                    const code = removeCurlies(expression);
 
                     if (doBind) {
 
@@ -119,11 +123,11 @@
 
                     }
 
-                    //console.info(code);
-
                     const value = evaluate(code, opts.vm, opts.globals);
 
                     currentBinding = null;
+
+
 
                     const type = typeof value;
 
@@ -206,10 +210,10 @@
         const loopNode = parse(node.innerHTML, node);
 
         bind({
-            template: attribute.value,
+            tmpl: attribute.value,
             vm,
             globals,
-            noCurlyBraces: true,
+            single: true,
             replace: list => {
 
                 list = model(list);
@@ -257,18 +261,16 @@
 
     function bindAttribute(node, attribute, vm, globals) {
 
-        let isLoop;
-
-        if (attribute.name === 'loop') {
+        if (attribute.name === 'uav-loop') {
 
             bindLoop(node, attribute, vm, globals);
 
-            isLoop = true;
+            return true;
 
-        } else if (attribute.name === 'style' || attribute.name === 'data-style') {
+        } else if (attribute.name === 'style' || attribute.name === 'uav-style') {
 
             bind({
-                template: attribute.value,
+                tmpl: attribute.value,
                 vm,
                 globals,
                 replace: style => {
@@ -278,12 +280,12 @@
                 }
             });
 
-            node.removeAttribute('data-style');
+            node.removeAttribute('uav-style');
 
-        } else if (attribute.name === 'data-src') {
+        } else if (attribute.name === 'uav-src') {
 
             bind({
-                template: attribute.value,
+                tmpl: attribute.value,
                 vm,
                 globals,
                 replace: src => {
@@ -293,12 +295,36 @@
                 }
             });
 
-            node.removeAttribute('data-src');
+            node.removeAttribute('uav-src');
+
+        } else if (attribute.name === 'uav-bind') {
+
+            node.addEventListener('input', () => {
+
+                evaluate(removeCurlies(attribute.value), vm, globals);
+
+                lastAccessed.vm[lastAccessed.key] = node.value;
+
+                lastAccessed = null;
+
+            });
+
+            bind({
+                tmpl: attribute.value,
+                vm,
+                globals,
+                single: true,
+                replace: value => {
+
+                    node.value = value;
+
+                }
+            });
 
         } else {
 
             bind({
-                template: attribute.value,
+                tmpl: attribute.value,
                 vm,
                 globals,
                 replace: value => {
@@ -320,14 +346,12 @@
 
         }
 
-        return isLoop;
-
     }
 
     function bindTextNode(node, vm, globals) {
 
         bind({
-            template: node.textContent,
+            tmpl: node.textContent,
             vm,
             globals,
             replace: value => {
@@ -371,9 +395,10 @@
         if (vm[tag] !== undefined && vm[tag]._element) {
 
             bind({
-                template: tag,
+                tmpl: tag,
                 vm,
                 globals,
+                single: true,
                 replace: newNode => {
 
                     if (node.parentNode === parent) {
@@ -390,8 +415,7 @@
 
                     }
 
-                },
-                noCurlyBraces: true
+                }
             });
 
         } else {
@@ -541,6 +565,8 @@
 
                 }
 
+                lastAccessed = {vm, key};
+
                 return data[key];
 
             }
@@ -594,19 +620,19 @@
 
     }
 
-    function component(vm, template, selector) {
+    function component(vm, tmpl, selector) {
 
         if (typeof vm === 'string') {
 
             vm = {_element: parse(vm)};
 
-            selector = template;
+            selector = tmpl;
 
         } else {
 
             vm = model(vm);
 
-            vm._element = render(parse(template), vm);
+            vm._element = render(parse(tmpl), vm);
 
         }
 

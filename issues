@@ -7,3 +7,4 @@
 - remove console logs
 - setting a deep object property can cause extra bindings to run
 - github page
+- test two way binding on all input types

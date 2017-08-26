@@ -4,7 +4,7 @@
 </head>
 <body>
 <div class="app"></div>
-<script src="uav.es6.3.js"></script>
+<script src="uav.js"></script>
 <script>
 const uav = window.uav;
 
@@ -18,10 +18,23 @@ const c = uav.component({
     list: [1, 2, 3, 4]
 }, `
 <div>
-    {data.name}
-    <ul loop="list">
+    {list[0]}
+    <ul uav-loop="list">
         <li>{this} {data.name}</li>
     </ul>
+    <input type="text" uav-bind="{list[0]}"/>
+    <select uav-bind="{list[0]}">
+        <option value="0">0</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+    </select>
+    <textarea uav-bind="list[0]"></textarea>
+    <form>
+        <input type="radio" uav-bind="{list[0]}">1
+        <input type="radio" uav-bind="{list[1]}">2
+    </form>
 </div>
 `, '.app');
 </script>
