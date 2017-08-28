@@ -1,6 +1,7 @@
 - nested loops
 - test two way binding on all input types
 - batch updates / async rendering
+- remove uav.placeholder
 
 - test.html should be removed
 - documentation
@@ -8,4 +9,3 @@
 - remove console logs
 - setting a deep object property can cause extra bindings to run
 - github page
-

@@ -384,7 +384,7 @@
 
                             const index = vm._index;
 
-                            vm._index = i;
+                            defineProp(vm, '_index', i);
 
                             if (node.children[i]) {
 
@@ -554,6 +554,8 @@
             commit: () => {
 
                 if (typeof result === 'function') {
+
+                    node.removeAttribute(attribute.name);
 
                     node[attribute.name] = result;
 
@@ -976,9 +978,9 @@
 
         }
 
-        if (typeof selector === 'string') {
+        if (typeof selector === 'string' || selector.tagName) {
 
-            const app = uav(selector);
+            const app = selector.tagName ? selector : uav(selector);
 
             const oldComponent = app.firstElementChild;
 
@@ -994,7 +996,7 @@
             
             if (typeof arguments[i] === 'function') {
 
-                arguments[i](vm._el);
+                requestAnimationFrame(() => arguments[i](vm._el));
 
                 break;
 

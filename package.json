@@ -1,11 +1,9 @@
 {
   "name": "uav",
   "version": "2.0.0",
-  "description": "A simple utility for one-way data binding",
-  "main": "uav.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "description": "Simple is good",
+  "main": "src/uav.js",
+  "scripts": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/unearth-inc/uav.git"
@@ -13,7 +11,11 @@
   "keywords": [
     "data",
     "binding",
-    "templates"
+    "template",
+    "view",
+    "spa",
+    "framework",
+    "uav"
   ],
   "author": "unearth",
   "license": "ISC",

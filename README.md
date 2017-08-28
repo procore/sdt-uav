@@ -1,173 +1,221 @@
 # uav
 
-uav solves the same problems as frameworks like React and Vue, but it's only 2KB, and far easier to use.
+uav aims to demonstrate that complexity is a problem in today's front end codebases. It solves the same problems as frameworks like React and Vue, but is only 2.1KB gzipped, and is easier to use.
 
-## Example
+> The goal of uav is not adoption. The goal is to show that the problems faced by modern web apps are not complex enough to justify the millions of developer hours our industry has invested complicated frameworks. 
 
-```javascript
-const component = uav.component(
-    {message: 'hello, world!'},
-    `<h1>{message}</h1>`,
-    '#app'
-);
+## Hello World
+
+```
+const component = uav.component({
+    message: 'Hello, world!'
+}, `
+    <div>
+        <h1>{message}</h1>
+    </div>
+`, '#app');
+
+// Renders into the #app element:
+<h1>Hello, world!</h1>
+
+// After running the following ...
+component.message = 'Goodbye, world.';
+
+// ... the HTML automatically updates:
+<h1>Goodbye, world.</h1>
 ```
 
-[See a JSFiddle](http://jsfiddle.net/t16bzg3m/7/)
-
-### `uav.component`
+## `uav.component`
 
 `uav.component(model, template, selector, callback)`
 
 Arguments:
-- `model`: A view model. Optional.
-- `template`: A template string. Must have exactly one root node.
-- `selector`: A CSS selector indicating a parent element in which to render this component. Optional.
-- `callback`: A function to call after the initial render. Passed the component's top-level DOM element. Optional.
+- `model` (Object): A view model. Optional.
+- `template` (String): An HTML template. Must have exactly one root node.
+- `selector` (String|Element): The element in which to render the component. Optional.
+- `callback` (Function): A function to call after the initial render. Passed the component's top-level DOM element. Optional.
 
-Returns: The model.
+Returns the model.
 
-```javascript
-const component = uav.component({text: 'hi!'}, '<h1>{text}</h1>', '#app');
+Changes to existing properties on the model will trigger an optimized re-render. Only the smallest DOM change possible will occur, down to the level of updating a single element attribute or text node. This is accomplished without any DOM diffing, because uav constructs a tree of closures that know exactly what needs to be updated whenever a particular property is changed.
+
+## Template Expressions
+
+By default, uav expressions use `{curly}` notation. Any browser-supported JavaScript can be used in an any expression. The result of the expression should be one of the following:
+- String
+- Number
+- Function (for event handlers)
+- Boolean (for simplified class and property bindings)
+- DOM element (don't render untrusted HTML in templates)
+- uav component
+- undefined or null (renders an empty string)
+
+Regardless of what you are binding or where you are binding it, the syntax is always the same.
+
+> You can change the template tag syntax with `uav.setTags()`. For example, to use `{{mustache}}` notation, call `uav.setTags('{{', '}}')` before creating any components.
+
+### Text expressions:
+```
+uav.component(
+    { content: 'foo' },
+    `<div>This is a content expression: {content}</div>`
+);
 ```
 
-Any changes to a component's model will trigger an optimized re-render. Only the smallest DOM change possible will occur, down to the level of updating a single element attribute or text node. This is accomplished without any DOM diffing, because uav constructs a tree of closures that remember exactly what needs to be updated whenever a given property is changed.
-
-### `uav.model`
-
-If you'd like to create a view model before associating it with a template, use this method.
-
-```javascript
-const model = uav.model({text: 'hi!'});
-
-const component = uav.component(model, '<h1>{text}</h1>')
+### Attribute expressions:
+```
+const component = uav.component({
+    visible: true,
+    className: 'component'
+},
+    `<div class="{className} {visible}"></div>`
+);
 ```
 
-### Template Expressions
+> If an expression evaluates to a boolean, it will render nothing if false, or the property name if true. This makes toggling the "visible" class on the above `<div>` as easy as `component.visble = !component.visible`.
 
-UAV expressions use `{curly}` notation. Any valid javascript can be used in an expression. The result of the expression can be a string, number, function, boolean, DOM element, UAV component, undefined, or null.
-
-#### Basic expression:
-```javascript
-`<div>This is a content expression: {content}</div>`
+#### Boolean attributes
+```
+uav.component(
+    { disabled: false },
+    `<input type="text" {disabled}>`
+);
 ```
 
-#### Attribute expression:
-```javascript
-`<div class="wrapper {visible}"></div>`
-```
+### Template Loops
 
-If an attribute expression evaluates to a boolean, it will render nothing if false, or the property name if true. This makes toggling the "visible" class on the above `<div>` as easy as `model.visble = !model.visible`.
+Add the `uav-loop` attribute to an element to repeat its content for each item in an array. Within the loop, reference the current value with `this`. Properties of the parent model are available within a loop.
 
-### Loops
-
-Add the `loop` attribute to an element to repeat its content for each item in an array. Within the loop, reference the current value with `this`.
-
-Array loop expression:
-```javascript
-`<ul loop="items">
-    <li>{this.name}</li>
-</ul>`
-```
-
-### Events
-
-Any template expression which evaluates to a function is assumed to be an event handler, and will be passed the event object.
-
-Event expression:
-```javascript
-`<div onclick={click}></div>`
-```
-
-You can pass data to event handlers like this:
+You can reference the current index of the array with the special property `_index`.
 
 ```
 uav.component({
-    click: item => e => console.log(item)
-    items: ['foo', 'bar', 'baz']
+    items: [ 1, 2, 'three' ]
+}, `
+    <ul uav-loop="items">
+        <li class="item-{_index}">{this}</li>
+    </ul>
+`);
+```
+
+> Array methods that modify the array like `push` and `splice` will trigger a re-render of the loop.
+
+> Curly braces are optional in the `uav-loop` attribute's value, since it is known to be an expression.
+
+> Like a component, a loop's content must have one root node.
+
+### Events
+
+```
+uav.component(
+    { click: e => console.log(e) }, 
+    `<button onclick={click}>Click me</button>`
+);
+```
+
+Like any expression, you can pass data to an event handler:
+
+```
+uav.component({
+    click: item => e => console.log(item),
+    items: [ 'foo', 'bar', 'baz' ]
 }, `
     <ul loop="items">
-        <li onclick={click(this)}> {this} </li>
+        <li onclick={click(this)}>This is {this}</li>
     </ul>
 `)
 ```
 
 ## Child Components
 
-A components can be rendered into another component by adding it to the model and referencing it as an HTML element.
+A components can be rendered into other components.
 
-```javascript
-const child = uav.component('<div>I am a child.</div>');
+```
+const child = uav.component(`<h3>I am a child.</h3>`);
 
-uav.component({child}, `
+uav.component(
+    { child }, `
     <div>
-        This is a component with a child.
-        <child></child>
+        <h1>This is a component with a child.</h1>
+        {child}
     </div>
 `);
 ```
 
 This will render the following:
 
-```html
+```
 <div>
-    This is a component with a child.
-    <div>I am a child.</div>
+    <h1>This is a component with a child.</h1>
+    <h3>I am a child.</h3>
 </div>
 ```
 
-> Note: child components must use names that are both valid javascript properties and valid HTML tags. Notably, this disallows using camel case for child component names.
+### Passing Data to Children
 
-## Passing Data to Children
+```
+const child = data => uav.component(
+    { data }, 
+    `<em>{data}</em>`
+);
 
-```javascript
-const child = data => uav.component({data}, `<div>{data}</div>`);
-
-const model = uav.model({
+uav.component({
     child: child('This is passed from parent to child.')
-});
-
-uav.component(model, `
+}, `
     <div>
         This component passes data to its child.
-        <child></child>
+        {child}
     </div>
 `);
 ```
 
-This will render the following into the `#app` component:
+This will render the following:
 
-```html
+```
 <div>
     This component passes data to its child.
-    <div>This is passed from parent to child.</div>
+    <em>This is passed from parent to child.</em>
 </div>
+```
+
+> uav supports swapping child components on the fly. For example, you could call `component.child = someOtherComponent` and the view will update accordingly.
+
+### Binding HTML
+To render an HTML string as a DOM element, you can use `uav.parse()`.
+
+```
+uav.component({
+    html: uav.parse('<script>location="https://en.wikipedia.org/wiki/Cross-site_scripting"</script>')
+}, 
+    `<div>{html}</div>`
+);
 ```
 
 ## Special Attributes
 
-### data-src
+### uav-src
 
-Imagine that an image source is bound to a template expression:
+Imagine that an image's source is bound to a template expression:
 
 `uav.component('<img src="{imageSource}" />');`
 
-To prevent your browser from making a request to `/{imageSource}` before your JavaSrcript runs, you can use the `data-src` attribute.
+To prevent your browser from making a request to `/{imageSource}` before your JavaScript runs, you can use the `uav-src` attribute.
 
-`uav.component('<img data-src="{imageSource}" />');`
+`uav.component('<img uav-src="{imageSource}" />');`
 
-### data-style
+### uav-style
 
 Internet Explorer can be extremely picky about the value of an inline `style` tag. A template expression like the following will work in any browser except IE:
 
 `uav.component('<div style="left: {left}px"></div>');`
 
-To support Internet Explorer, you can use the `data-style` attribute instead:
+To support Internet Explorer, you can use the `uav-style` attribute instead:
 
-`uav.component('<div data-style="left: {left}px"></div>');`
+`uav.component('<div uav-style="left: {left}px"></div>');`
 
 ## DOM Access
 
-Elements can be accessed by passing a selector to the `uav` function.
+Elements can be accessed directly by passing a selector to the `uav` function.
 
 Access the first matched element:
 
@@ -181,11 +229,48 @@ Access the nth matched element:
 
 `uav('.item', 3).classList.toggle('visible');`
 
+## `uav.model`
+
+If you'd like to create a view model before associating it with a template, use this method.
+
+```
+const model = uav.model({ text: 'hi!' });
+
+const component = uav.component(model, '<h1>{text}</h1>')
+```
+
+## Two way data binding
+
+Two way binding is cool, but is only applicable to form-based interfaces, and can encourage lazy coding practices. For these reasons it is included as a separate file, `uav-bind.js`.
+
+After including this file, any HTML input types that support the `value` property can be two-way bound using the `uav-bind` attribute. When a user changes a value, the model will automatically update to reflect it.
+
+```
+uav.component(
+    { value: 'hi there' }
+    `<input type="text" uav-bind="value"/>`
+);
+```
+
+Because checkbox inputs describe a list of selected items, they can only be bound to arrays.
+
+```
+uav.component({
+    items: [1, 2]
+}, `
+    <input type="checkbox" uav-bind="items" value="1" name="check">1<br>
+    <input type="checkbox" uav-bind="items" value="2" name="check">2<br>
+    <input type="checkbox" uav-bind="items" value="3" name="check">3<br>`
+);
+```
+
+> `uav-bind.js` is 586 bytes gzipped.
+
 ## Performance Notes
 
 ### Only bind data when you have to
 
-Avoid putting any data on the model that doesn't need to be bound to HTML. If a particular value will never change, or changes to it don't need to update the DOM, just use a regular ES6 template variable to reference it (put a dollar sign in front of the expression).
+Avoid putting any data on the model that doesn't need to be bound to the DOM. If a particular value will never change, or changes to it don't need to update the DOM, just use a regular ES6 template variable to reference it (put a dollar sign in front of the expression).
 
 ```
 const wontChange = 'hi!';
@@ -202,11 +287,11 @@ uav.component({
 
 ### Unbind any DOM nodes you've manually detached
 
-When uav updates the DOM as a result of a change to a model, it automatically removes any bindings to DOM nodes that have been replaced. However, if for some reason you manually remove or replace a bound DOM node, you can clean up any bindings to it with `uav.unbind(<Element>)`.
+When uav updates the DOM as a result of a change to a model, it automatically removes any bindings to DOM nodes that have been removed or replaced. However, if for some reason you manually remove or replace a bound DOM node, you can clean up any bindings to it with `uav.unbind(<Element>)`.
 
 ## Collapsing Whitespace
 
-Using multiline template strings creates unnecessary whitespace in your javascript files. To collapse whitespace, add a step like this to your build process:
+Using multiline template strings creates unnecessary whitespace in your JavaScript files. To collapse whitespace, add a step like this to your build process:
 
 `tr -s " " < dist/bundle.js > dist/tmp && mv dist/tmp dist/bundle.js`
 
