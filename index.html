@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>uav | simple is good.</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <meta charset="UTF-8">
 </head>
 <body>
@@ -19,15 +19,19 @@ body {
 blockquote {
     border-left: 3px solid #ccc;
     padding-left: 20px;
+    margin-left: 0;
 }
 pre {
     background: #e9eaec;
     display: inline-block;
-    padding: 30px 40px;
+    padding: 20px 30px;
     border-radius: 4px;
     color: #616161;
     margin: 0;
     box-shadow: inset 1px 1px 9px #dcdcdc;
+    overflow-x: scroll;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 .center {
     text-align: center;
