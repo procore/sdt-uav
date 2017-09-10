@@ -2,8 +2,10 @@
   "name": "uav",
   "version": "2.0.0",
   "description": "Simple is good",
-  "main": "src/uav.js",
-  "scripts": {},
+  "main": "dist/uav.js",
+  "scripts": {
+    "build": ". build.sh"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/unearth-inc/uav.git"
@@ -22,5 +24,51 @@
   "bugs": {
     "url": "https://github.com/unearth-inc/uav/issues"
   },
-  "homepage": "https://github.com/unearth-inc/uav#readme"
+  "homepage": "https://github.com/unearth-inc/uav#readme",
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-plugin-check-es2015-constants": "^6.22.0",
+    "babel-plugin-transform-es2015-arrow-functions": "^6.22.0",
+    "babel-plugin-transform-es2015-block-scoped-functions": "^6.22.0",
+    "babel-plugin-transform-es2015-block-scoping": "^6.26.0",
+    "babel-plugin-transform-es2015-classes": "^6.24.1",
+    "babel-plugin-transform-es2015-computed-properties": "^6.24.1",
+    "babel-plugin-transform-es2015-destructuring": "^6.23.0",
+    "babel-plugin-transform-es2015-duplicate-keys": "^6.24.1",
+    "babel-plugin-transform-es2015-for-of": "^6.23.0",
+    "babel-plugin-transform-es2015-function-name": "^6.24.1",
+    "babel-plugin-transform-es2015-literals": "^6.22.0",
+    "babel-plugin-transform-es2015-object-super": "^6.24.1",
+    "babel-plugin-transform-es2015-parameters": "^6.24.1",
+    "babel-plugin-transform-es2015-shorthand-properties": "^6.24.1",
+    "babel-plugin-transform-es2015-spread": "^6.22.0",
+    "babel-plugin-transform-es2015-sticky-regex": "^6.24.1",
+    "babel-plugin-transform-es2015-template-literals": "^6.22.0",
+    "babel-plugin-transform-es2015-unicode-regex": "^6.24.1",
+    "babel-plugin-transform-regenerator": "^6.26.0",
+    "uglify-js": "^3.1.0"
+  },
+  "babel": {
+    "plugins": [
+      "babel-plugin-check-es2015-constants",
+      "babel-plugin-transform-es2015-arrow-functions",
+      "babel-plugin-transform-es2015-block-scoped-functions",
+      "babel-plugin-transform-es2015-block-scoping",
+      "babel-plugin-transform-es2015-classes",
+      "babel-plugin-transform-es2015-computed-properties",
+      "babel-plugin-transform-es2015-destructuring",
+      "babel-plugin-transform-es2015-duplicate-keys",
+      "babel-plugin-transform-es2015-for-of",
+      "babel-plugin-transform-es2015-function-name",
+      "babel-plugin-transform-es2015-literals",
+      "babel-plugin-transform-es2015-object-super",
+      "babel-plugin-transform-es2015-parameters",
+      "babel-plugin-transform-es2015-shorthand-properties",
+      "babel-plugin-transform-es2015-spread",
+      "babel-plugin-transform-es2015-sticky-regex",
+      "babel-plugin-transform-es2015-template-literals",
+      "babel-plugin-transform-es2015-unicode-regex",
+      "babel-plugin-transform-regenerator"
+    ]
+  }
 }

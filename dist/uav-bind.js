@@ -1,11 +1,10 @@
-(() => {
+(function () {
 
-    const  uav = window.uav;
+    var uav = window.uav;
 
     if (!uav) {
 
         return console.error('Include uav.js before uav-bind.js');
-
     }
 
     /*
@@ -21,16 +20,14 @@
      */
     function listenForInput(node, tmpl, vm, event) {
 
-        node.addEventListener(event, () => {
+        node.addEventListener(event, function () {
 
             uav.evaluate(tmpl, vm);
 
             uav.lastAccessed.vm[uav.lastAccessed.key] = node.value;
 
             uav.lastAccessed = null;
-
         });
-
     }
 
     /*
@@ -46,20 +43,16 @@
 
         listenForInput(node, tmpl, vm, 'change');
 
-        return value => {
+        return function (value) {
 
             if (value === node.value) {
 
                 node.setAttribute('checked', '');
-
             } else {
 
                 node.removeAttribute('checked');
-
             }
-
         };
-
     }
 
     /*
@@ -73,50 +66,42 @@
      */
     function bindCheckbox(node, tmpl, vm) {
 
-        node.addEventListener('change', () => {
+        node.addEventListener('change', function () {
 
             uav.evaluate(tmpl, vm);
 
-            const list = uav.lastAccessed.vm[uav.lastAccessed.key];
+            var list = uav.lastAccessed.vm[uav.lastAccessed.key];
 
             uav.lastAccessed = null;
 
-            const index = list.indexOf(node.value);
+            var index = list.indexOf(node.value);
 
-            const notInList = index === -1;
+            var notInList = index === -1;
 
             if (node.checked && notInList) {
 
                 list.push(node.value);
-
             } else if (!node.checked && !notInList) {
 
                 list.splice(index, 1);
-
             }
-
         });
 
-        return list => {
+        return function (list) {
 
-            const inputs = node.parentNode.querySelectorAll(`input[name="${node.getAttribute('name')}"]`);
+            var inputs = node.parentNode.querySelectorAll('input[name="' + node.getAttribute('name') + '"]');
 
-            Array.from(inputs).forEach(input => {
+            Array.from(inputs).forEach(function (input) {
 
                 if (list.indexOf(input.value) === -1) {
 
                     input.removeAttribute('checked');
-
                 } else {
 
                     input.setAttribute('checked', '');
-
                 }
-
             });
-
         };
-
     }
 
     /*
@@ -132,12 +117,10 @@
 
         listenForInput(node, tmpl, vm, 'input');
 
-        return value => {
+        return function (value) {
 
             node.value = value;
-
         };
-
     }
 
     /*
@@ -149,39 +132,36 @@
      *
      * @return {Object} - binding options
      */
-    uav.attributes.push((node, attribute, vm) => {
+    uav.attributes.push(function (node, attribute, vm) {
 
         if (attribute.name === 'uav-bind') {
 
-            let replace;
+            var replace = void 0;
 
-            const tmpl = uav.stripTags(attribute.value);
+            var tmpl = uav.stripTags(attribute.value);
 
             node.removeAttribute('uav-bind');
 
             switch (node.getAttribute('type')) {
 
-            case 'radio':
-                replace = bindRadio(node, tmpl, vm);
-                break;
+                case 'radio':
+                    replace = bindRadio(node, tmpl, vm);
+                    break;
 
-            case 'checkbox':
-                replace = bindCheckbox(node, tmpl, vm);
-                break;
+                case 'checkbox':
+                    replace = bindCheckbox(node, tmpl, vm);
+                    break;
 
-            default:
-                replace = bindInput(node, tmpl, vm);
+                default:
+                    replace = bindInput(node, tmpl, vm);
 
             }
 
             return {
-                tmpl,
+                tmpl: tmpl,
                 one: true,
-                replace
+                replace: replace
             };
-
         }
-
     });
-
 })();

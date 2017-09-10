@@ -1,4 +1,19 @@
 (() => {
+
+    /*
+     * Array.prototype.from shim for IE
+     *
+     * Using destructuring would be preferable syntactically, but the Babel 
+     * shim for that is nearly 100 bytes gzipped.
+     */
+    if (!Array.from) {
+
+        Array.from = function(object) {
+
+            return [].slice.call(object);
+        };
+
+    }
     
     /**
      * currentBinding tracks the binding which is currently executing.
@@ -23,7 +38,6 @@
      * - node: the element on which the attribute appears
      * - attribute: an object with name and value properties
      * - vm: the view model against which attribute expressions should be evaluated
-     * - globals: the parent view model, if node is within a template loop
      * 
      * @type {Array}
      */
@@ -53,6 +67,11 @@
      * @return {Element}
      */
     const createElement = tag => document.createElement(tag);
+
+    /*
+     * Wrap typeof to simplify dealing with verbose babel transforms.
+     */
+    const _typeof = (val, type) => typeof val === type;
 
     /**
      * defineProp adds a non-enumerable property to an object.
@@ -84,7 +103,7 @@
 
             Array.prototype[method].apply(vm, args);
 
-            set([...vm]);
+            set(Array.from(vm));
 
         });
 
@@ -105,6 +124,36 @@
     }
 
     /**
+     * Selects an array of DOM nodes using a CSS selector.
+     * - act on all matched elements:       uav.all('.items', el => el.classList.add('active'));
+     * - act on the nth matched element:    uav.all('.items', 2).classList.add('active'));
+     * - return all matched elements:       uav.all('.items').forEach(el => el.classList.add('active'));
+     * 
+     * @param  {String} selector - the CSS selector to search for
+     * @param  {(Function|Number)} fnOrIndex (optional)
+     *          - a callback, passed all matched nodes, OR
+     *          - the index of the matched node to return.
+     * @return {Array}
+     */
+    function all(selector, fnOrIndex) {
+
+        const els = Array.from(document.querySelectorAll(selector));
+
+        if (_typeof(fnOrIndex, 'function')) {
+
+            return els.forEach(fnOrIndex);
+
+        } else if (_typeof(fnOrIndex, 'number')) {
+
+            return els[fnOrIndex];
+
+        }
+
+        return els;
+
+    }
+
+    /**
      * uav is a global utility for selecting DOM nodes using a CSS selector.
      * - act on the first matched element:  uav('#item').classList.add('active');
      * - act on all matched elements:       uav('.items', el => el.classList.add('active'));
@@ -120,23 +169,11 @@
 
         if (fnOrIndex !== undefined) {
 
-            const els = Array.from(document.querySelectorAll(selector));
-
-            if (typeof fnOrIndex === 'function') {
-
-                els.forEach(fnOrIndex);
-
-            } else if (typeof fnOrIndex === 'number') {
-
-                return els[fnOrIndex];
-
-            }
-
-        } else {
-
-            return document.querySelector(selector) || createElement('div');
+            return all(selector, fnOrIndex);
 
         }
+
+        return document.querySelector(selector) || createElement('div');
 
     };
 
@@ -194,14 +231,13 @@
      * 
      * @param  {String} expression - the expression to evaluate
      * @param  {any} vm - the scope in which to evaluate, and the value of this
-     * @param  {Globals} - the scope in which to evaluate if vm is not an object (optional)
      * @return {any}
      */
-    function evaluate(expression, vm, globals) {
+    function evaluate(expression, vm) {
 
         try {
 
-            return new Function(`with(arguments[0]){return ${expression}}`).bind(vm)(globals || vm);
+            return new Function(`with(arguments[0]){return ${expression}}`)(vm);
 
         } catch (err) {
 
@@ -222,7 +258,7 @@
 
         if (node && node._uav) {
 
-            [...node.children].forEach(unbind);
+            Array.from(node.children).forEach(unbind);
 
             node._uav.forEach(fn => fn());
 
@@ -248,18 +284,18 @@
      * @param  {Object} opts - binding options, as follows:
      *          {
      *              tmpl   : {string} the template string to check
-     *              single : {boolean} this template is guaranteed to have one expression
+     *              one : {boolean} this template is guaranteed to have one expression
      *              replace: {function} handles in-progress template evaluations
      *              commit : {function} handles completed template evaluations
      *          }
      *
      * @param  {Object} vm - the view model for the expression
-     * @param  {Object} globals - the parent view model (optional)
+     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
      * @return {undefined}
      */
-    function bind(opts, vm, globals) {
+    function bind(opts, vm, loopMethods) {
 
-        const expressions = opts.single ? [opts.tmpl] : opts.tmpl.match(uav.expRX);
+        const expressions = opts.one ? [opts.tmpl] : opts.tmpl.match(uav.expRX);
 
         if (expressions) {
 
@@ -269,17 +305,29 @@
 
                     const code = stripTags(expression);
 
+                    if (loopMethods) {
+
+                        loopMethods.set(vm);
+
+                    }
+
                     if (doBind) {
 
                         currentBinding = binding;
 
                     }
 
-                    let value = evaluate(code, vm, globals);
+                    let value = evaluate(code, vm, loopMethods);
+
+                    if (loopMethods) {
+
+                        loopMethods.reset(vm);
+
+                    }
 
                     currentBinding = null;
 
-                    if (typeof value === 'boolean') {
+                    if (_typeof(value, 'boolean')) {
 
                         value = value ? code : '';
 
@@ -356,21 +404,33 @@
 
             const loopNode = parse(node.innerHTML, node);
 
+            /**
+             * Babel's slice to array shim is ~200 bytes, so we'll use
+             * old fashioned syntax here.
+             */
+            const loopVars = node.getAttribute('uav-as').split(',');
+
+            const as = loopVars[0];
+
+            const index = loopVars[1];
+
+            node.removeAttribute('uav-as');
+
             return {
                 loop: true,
                 tmpl: attribute.value,
-                single: true,
+                one: true,
                 replace: list => {
 
                     list = model(list);
 
-                    [...node.children].forEach(unbind);
+                    Array.from(node.children).forEach(unbind);
 
                     node.innerHTML = '';
 
                     list.forEach((item, i) => {
 
-                        function listBinding(doBind) {
+                        function binding(doBind) {
 
                             const child = loopNode.cloneNode();
 
@@ -378,31 +438,49 @@
 
                             if (doBind) {
 
-                                currentBinding = listBinding;
+                                currentBinding = binding;
 
                             }
 
-                            const index = vm._index;
+                            const origAs = vm[as];
 
-                            defineProp(vm, '_index', i);
+                            const origIndex = vm[index];
+
+                            const loopMethods = {
+
+                                set(_vm) {
+
+                                    _vm[as] = list[i];
+                                    
+                                    _vm[index] = i;
+
+                                },
+
+                                reset(_vm) {
+
+                                    _vm[as] = origAs;
+
+                                    _vm[index] = origIndex;
+
+                                }
+
+                            };
 
                             if (node.children[i]) {
 
-                                node.replaceChild(render(child, list[i], vm), node.children[i]);
+                                node.replaceChild(render(child, vm, loopMethods), node.children[i]);
 
                             } else {
 
-                                node.appendChild(render(child, list[i], vm));
+                                node.appendChild(render(child, vm, loopMethods));
 
                             }
-
-                            vm._index = index;
 
                             currentBinding = null;
 
                         }
 
-                        listBinding(true);
+                        binding(true);
 
                     });
 
@@ -540,7 +618,7 @@
             tmpl,
             replace: (value, expression) => {
 
-                if (typeof value === 'function') {
+                if (_typeof(value, 'function')) {
 
                     result = value;
 
@@ -553,7 +631,7 @@
             },
             commit: () => {
 
-                if (typeof result === 'function') {
+                if (_typeof(result, 'function')) {
 
                     node.removeAttribute(attribute.name);
 
@@ -579,22 +657,22 @@
      * @param  {Element} node - the owner of the attribute 
      * @param  {Object} attribute - an object with name and value properties
      * @param  {Object} vm - the current view model
-     * @param  {Object} globals - the parent view model (optional)
+     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
      * @return {Boolean} isLoop - indicates whether the node contains a template loop
      */
-    function bindAttribute(node, attribute, vm, globals) {
+    function bindAttribute(node, attribute, vm, loopMethods) {
 
         let isLoop;
 
         for (let i = 0; i < attributes.length; i++) {
 
-            const opts = attributes[i](node, attribute, vm, globals);
+            const opts = attributes[i](node, attribute, vm);
 
             if (opts) {
 
                 node.removeAttribute(attribute.name);
 
-                bind(opts, vm, globals);
+                bind(opts, vm, loopMethods);
 
                 if (opts.loop) {
 
@@ -606,7 +684,7 @@
 
         }
 
-        bind(defaultAttributeCheck(node, attribute), vm, globals);
+        bind(defaultAttributeCheck(node, attribute), vm, loopMethods);
 
         return isLoop;
 
@@ -617,10 +695,10 @@
      * 
      * @param  {Element} node - the text node to parse
      * @param  {Object} vm - the current view model
-     * @param  {Object} globals - the parent view model (optional)
+     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
      * @return {undefined}
      */
-    function bindTextNode(node, vm, globals) {
+    function bindTextNode(node, vm, loopMethods) {
 
         bind({
             tmpl: node.textContent,
@@ -658,7 +736,7 @@
                 }
 
             }
-        }, vm, globals);
+        }, vm, loopMethods);
 
     }
 
@@ -669,10 +747,10 @@
      * 
      * @param  {Element} node - the starting text node
      * @param  {Object} vm - the current view model
-     * @param  {Object} globals - the parent view model (optional)
+     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
      * @return {undefined}
      */
-    function explodeTextNode(node, vm, globals) {
+    function explodeTextNode(node, vm, loopMethods) {
 
         const parts = node.textContent.split(uav.expRX);
 
@@ -688,7 +766,7 @@
 
                 parent.insertBefore(newNode, lastNode.nextSibling);
 
-                bindTextNode(newNode, vm, globals);
+                bindTextNode(newNode, vm, loopMethods);
 
                 lastNode = newNode;
 
@@ -706,10 +784,10 @@
      * 
      * @param  {Element} node - the node to parse
      * @param  {Object} vm - the current view model
-     * @param  {Object} globals - the parent view model (optional)
+     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
      * @return {Element}
      */
-    function render(node, vm, globals) {
+    function render(node, vm, loopMethods) {
 
         let isLoop;
 
@@ -719,7 +797,7 @@
 
         forEachAttribute(node, attribute => {
 
-            if (bindAttribute(node, attribute, vm, globals)) {
+            if (bindAttribute(node, attribute, vm, loopMethods)) {
 
                 isLoop = true;
 
@@ -737,11 +815,11 @@
 
             if (child.nodeType === 3) {
 
-                explodeTextNode(child, vm, globals); 
+                explodeTextNode(child, vm, loopMethods); 
             
             } else {
 
-                render(child, vm, globals);
+                render(child, vm, loopMethods);
 
             }
 
@@ -759,21 +837,7 @@
      */
     function isVmEligible(data) {
 
-        return !(!data || typeof data !== 'object' || data._uav || data.tagName);
-
-    }
-
-    /**
-     * For use as a placeholder for a child component.
-     * 
-     * @param  {String} tag - the type of element to create (optional)
-     * @return {Object}
-     */
-    function placeholder(tag) {
-
-        return {
-            _el: createElement(tag || 'div')
-        };
+        return !(!data || !_typeof(data, 'object') || data._uav || data.tagName);
 
     }
 
@@ -787,7 +851,7 @@
      */
     function copyBindings(from, to) {
 
-        if (from._uav && to) {
+        if (from && from._uav && to) {
 
             Object.keys(from).forEach(key => {
 
@@ -898,7 +962,7 @@
              */
             function set(value) {
 
-                if (data[key] !== value || typeof value === 'object') {
+                if (data[key] !== value || _typeof(value, 'object')) {
 
                     /**
                      * If the new value is eligible for use as a vm,
@@ -937,7 +1001,7 @@
 
             }
 
-            data[key] = processValue(data[key] ? data[key].valueOf() : data[key]);
+            data[key] = processValue(data[key]);
 
             Object.defineProperty(vm, key, {
                 get,
@@ -964,7 +1028,7 @@
      */
     function component(vm, tmpl, selector) {
 
-        if (typeof vm === 'string') {
+        if (_typeof(vm, 'string')) {
 
             vm = {_el: parse(vm)};
 
@@ -978,7 +1042,7 @@
 
         }
 
-        if (typeof selector === 'string' || selector.tagName) {
+        if (_typeof(selector, 'string') || selector && selector.tagName) {
 
             const app = selector.tagName ? selector : uav(selector);
 
@@ -994,7 +1058,7 @@
 
         for (let i = 0; i < arguments.length; i++) {
             
-            if (typeof arguments[i] === 'function') {
+            if (_typeof(arguments[i], 'function')) {
 
                 requestAnimationFrame(() => arguments[i](vm._el));
 
@@ -1018,10 +1082,10 @@
     /**
      * Methods intended for public use
      */
+    uav.all         = all;
     uav.component   = component;
     uav.model       = model;
     uav.parse       = parse;
-    uav.placeholder = placeholder;
     uav.setTag      = setTag;
     uav.unbind      = unbind;
 

@@ -1,10 +1,18 @@
-'use strict';
-
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
-function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
-
 (function () {
+
+    /*
+     * Array.prototype.from shim for IE
+     *
+     * Using destructuring would be preferable syntactically, but the Babel 
+     * shim for that is nearly 100 bytes gzipped.
+     */
+    if (!Array.from) {
+
+        Array.from = function (object) {
+
+            return [].slice.call(object);
+        };
+    }
 
     /**
      * currentBinding tracks the binding which is currently executing.
@@ -29,7 +37,6 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
      * - node: the element on which the attribute appears
      * - attribute: an object with name and value properties
      * - vm: the view model against which attribute expressions should be evaluated
-     * - globals: the parent view model, if node is within a template loop
      * 
      * @type {Array}
      */
@@ -60,6 +67,13 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
      */
     var createElement = function createElement(tag) {
         return document.createElement(tag);
+    };
+
+    /*
+     * Wrap typeof to simplify dealing with verbose babel transforms.
+     */
+    var _typeof = function _typeof(val, type) {
+        return typeof val === type;
     };
 
     /**
@@ -97,7 +111,7 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
             Array.prototype[method].apply(vm, args);
 
-            set([].concat(_toConsumableArray(vm)));
+            set(Array.from(vm));
         });
     }
 
@@ -117,6 +131,33 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
     }
 
     /**
+     * Selects an array of DOM nodes using a CSS selector.
+     * - act on all matched elements:       uav.all('.items', el => el.classList.add('active'));
+     * - act on the nth matched element:    uav.all('.items', 2).classList.add('active'));
+     * - return all matched elements:       uav.all('.items').forEach(el => el.classList.add('active'));
+     * 
+     * @param  {String} selector - the CSS selector to search for
+     * @param  {(Function|Number)} fnOrIndex (optional)
+     *          - a callback, passed all matched nodes, OR
+     *          - the index of the matched node to return.
+     * @return {Array}
+     */
+    function all(selector, fnOrIndex) {
+
+        var els = Array.from(document.querySelectorAll(selector));
+
+        if (_typeof(fnOrIndex, 'function')) {
+
+            return els.forEach(fnOrIndex);
+        } else if (_typeof(fnOrIndex, 'number')) {
+
+            return els[fnOrIndex];
+        }
+
+        return els;
+    }
+
+    /**
      * uav is a global utility for selecting DOM nodes using a CSS selector.
      * - act on the first matched element:  uav('#item').classList.add('active');
      * - act on all matched elements:       uav('.items', el => el.classList.add('active'));
@@ -132,19 +173,10 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
         if (fnOrIndex !== undefined) {
 
-            var els = Array.from(document.querySelectorAll(selector));
-
-            if (typeof fnOrIndex === 'function') {
-
-                els.forEach(fnOrIndex);
-            } else if (typeof fnOrIndex === 'number') {
-
-                return els[fnOrIndex];
-            }
-        } else {
-
-            return document.querySelector(selector) || createElement('div');
+            return all(selector, fnOrIndex);
         }
+
+        return document.querySelector(selector) || createElement('div');
     };
 
     /**
@@ -198,14 +230,13 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
      * 
      * @param  {String} expression - the expression to evaluate
      * @param  {any} vm - the scope in which to evaluate, and the value of this
-     * @param  {Globals} - the scope in which to evaluate if vm is not an object (optional)
      * @return {any}
      */
-    function evaluate(expression, vm, globals) {
+    function evaluate(expression, vm) {
 
         try {
 
-            return new Function('with(arguments[0]){return ' + expression + '}').bind(vm)(globals || vm);
+            return new Function('with(arguments[0]){return ' + expression + '}')(vm);
         } catch (err) {
 
             return INVALID_EXPRESSION;
@@ -223,7 +254,7 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
         if (node && node._uav) {
 
-            [].concat(_toConsumableArray(node.children)).forEach(unbind);
+            Array.from(node.children).forEach(unbind);
 
             node._uav.forEach(function (fn) {
                 return fn();
@@ -251,18 +282,18 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
      * @param  {Object} opts - binding options, as follows:
      *          {
      *              tmpl   : {string} the template string to check
-     *              single : {boolean} this template is guaranteed to have one expression
+     *              one : {boolean} this template is guaranteed to have one expression
      *              replace: {function} handles in-progress template evaluations
      *              commit : {function} handles completed template evaluations
      *          }
      *
      * @param  {Object} vm - the view model for the expression
-     * @param  {Object} globals - the parent view model (optional)
+     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
      * @return {undefined}
      */
-    function bind(opts, vm, globals) {
+    function bind(opts, vm, loopMethods) {
 
-        var expressions = opts.single ? [opts.tmpl] : opts.tmpl.match(uav.expRX);
+        var expressions = opts.one ? [opts.tmpl] : opts.tmpl.match(uav.expRX);
 
         if (expressions) {
             var binding = function binding(doBind) {
@@ -271,16 +302,26 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
                     var code = stripTags(expression);
 
+                    if (loopMethods) {
+
+                        loopMethods.set(vm);
+                    }
+
                     if (doBind) {
 
                         currentBinding = binding;
                     }
 
-                    var value = evaluate(code, vm, globals);
+                    var value = evaluate(code, vm, loopMethods);
+
+                    if (loopMethods) {
+
+                        loopMethods.reset(vm);
+                    }
 
                     currentBinding = null;
 
-                    if (typeof value === 'boolean') {
+                    if (_typeof(value, 'boolean')) {
 
                         value = value ? code : '';
                     } else if (value === undefined || value === null || value === INVALID_EXPRESSION) {
@@ -349,21 +390,33 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
             var loopNode = parse(node.innerHTML, node);
 
+            /**
+             * Babel's slice to array shim is ~200 bytes, so we'll use
+             * old fashioned syntax here.
+             */
+            var loopVars = node.getAttribute('uav-as').split(',');
+
+            var as = loopVars[0];
+
+            var index = loopVars[1];
+
+            node.removeAttribute('uav-as');
+
             return {
                 loop: true,
                 tmpl: attribute.value,
-                single: true,
+                one: true,
                 replace: function replace(list) {
 
                     list = model(list);
 
-                    [].concat(_toConsumableArray(node.children)).forEach(unbind);
+                    Array.from(node.children).forEach(unbind);
 
                     node.innerHTML = '';
 
                     list.forEach(function (item, i) {
 
-                        function listBinding(doBind) {
+                        function binding(doBind) {
 
                             var child = loopNode.cloneNode();
 
@@ -371,27 +424,40 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
                             if (doBind) {
 
-                                currentBinding = listBinding;
+                                currentBinding = binding;
                             }
 
-                            var index = vm._index;
+                            var origAs = vm[as];
 
-                            vm._index = i;
+                            var origIndex = vm[index];
+
+                            var loopMethods = {
+                                set: function set(_vm) {
+
+                                    _vm[as] = list[i];
+
+                                    _vm[index] = i;
+                                },
+                                reset: function reset(_vm) {
+
+                                    _vm[as] = origAs;
+
+                                    _vm[index] = origIndex;
+                                }
+                            };
 
                             if (node.children[i]) {
 
-                                node.replaceChild(render(child, list[i], vm), node.children[i]);
+                                node.replaceChild(render(child, vm, loopMethods), node.children[i]);
                             } else {
 
-                                node.appendChild(render(child, list[i], vm));
+                                node.appendChild(render(child, vm, loopMethods));
                             }
-
-                            vm._index = index;
 
                             currentBinding = null;
                         }
 
-                        listBinding(true);
+                        binding(true);
                     });
                 }
             };
@@ -512,7 +578,7 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
             tmpl: tmpl,
             replace: function replace(value, expression) {
 
-                if (typeof value === 'function') {
+                if (_typeof(value, 'function')) {
 
                     result = value;
                 } else {
@@ -522,7 +588,9 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
             },
             commit: function commit() {
 
-                if (typeof result === 'function') {
+                if (_typeof(result, 'function')) {
+
+                    node.removeAttribute(attribute.name);
 
                     node[attribute.name] = result;
                 } else {
@@ -542,22 +610,22 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
      * @param  {Element} node - the owner of the attribute 
      * @param  {Object} attribute - an object with name and value properties
      * @param  {Object} vm - the current view model
-     * @param  {Object} globals - the parent view model (optional)
+     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
      * @return {Boolean} isLoop - indicates whether the node contains a template loop
      */
-    function bindAttribute(node, attribute, vm, globals) {
+    function bindAttribute(node, attribute, vm, loopMethods) {
 
         var isLoop = void 0;
 
         for (var i = 0; i < attributes.length; i++) {
 
-            var opts = attributes[i](node, attribute, vm, globals);
+            var opts = attributes[i](node, attribute, vm);
 
             if (opts) {
 
                 node.removeAttribute(attribute.name);
 
-                bind(opts, vm, globals);
+                bind(opts, vm, loopMethods);
 
                 if (opts.loop) {
 
@@ -566,7 +634,7 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
             }
         }
 
-        bind(defaultAttributeCheck(node, attribute), vm, globals);
+        bind(defaultAttributeCheck(node, attribute), vm, loopMethods);
 
         return isLoop;
     }
@@ -576,10 +644,10 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
      * 
      * @param  {Element} node - the text node to parse
      * @param  {Object} vm - the current view model
-     * @param  {Object} globals - the parent view model (optional)
+     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
      * @return {undefined}
      */
-    function bindTextNode(node, vm, globals) {
+    function bindTextNode(node, vm, loopMethods) {
 
         bind({
             tmpl: node.textContent,
@@ -611,7 +679,7 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
                     }
                 }
             }
-        }, vm, globals);
+        }, vm, loopMethods);
     }
 
     /**
@@ -621,10 +689,10 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
      * 
      * @param  {Element} node - the starting text node
      * @param  {Object} vm - the current view model
-     * @param  {Object} globals - the parent view model (optional)
+     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
      * @return {undefined}
      */
-    function explodeTextNode(node, vm, globals) {
+    function explodeTextNode(node, vm, loopMethods) {
 
         var parts = node.textContent.split(uav.expRX);
 
@@ -640,7 +708,7 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
                 parent.insertBefore(newNode, lastNode.nextSibling);
 
-                bindTextNode(newNode, vm, globals);
+                bindTextNode(newNode, vm, loopMethods);
 
                 lastNode = newNode;
             }
@@ -655,10 +723,10 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
      * 
      * @param  {Element} node - the node to parse
      * @param  {Object} vm - the current view model
-     * @param  {Object} globals - the parent view model (optional)
+     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
      * @return {Element}
      */
-    function render(node, vm, globals) {
+    function render(node, vm, loopMethods) {
 
         var isLoop = void 0;
 
@@ -668,7 +736,7 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
         forEachAttribute(node, function (attribute) {
 
-            if (bindAttribute(node, attribute, vm, globals)) {
+            if (bindAttribute(node, attribute, vm, loopMethods)) {
 
                 isLoop = true;
             }
@@ -683,10 +751,10 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
             if (child.nodeType === 3) {
 
-                explodeTextNode(child, vm, globals);
+                explodeTextNode(child, vm, loopMethods);
             } else {
 
-                render(child, vm, globals);
+                render(child, vm, loopMethods);
             }
         });
 
@@ -701,20 +769,7 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
      */
     function isVmEligible(data) {
 
-        return !(!data || (typeof data === 'undefined' ? 'undefined' : _typeof(data)) !== 'object' || data._uav || data.tagName);
-    }
-
-    /**
-     * For use as a placeholder for a child component.
-     * 
-     * @param  {String} tag - the type of element to create (optional)
-     * @return {Object}
-     */
-    function placeholder(tag) {
-
-        return {
-            _el: createElement(tag || 'div')
-        };
+        return !(!data || !_typeof(data, 'object') || data._uav || data.tagName);
     }
 
     /**
@@ -727,7 +782,7 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
      */
     function copyBindings(from, to) {
 
-        if (from._uav && to) {
+        if (from && from._uav && to) {
 
             Object.keys(from).forEach(function (key) {
 
@@ -828,7 +883,7 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
              */
             function set(value) {
 
-                if (data[key] !== value || (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object') {
+                if (data[key] !== value || _typeof(value, 'object')) {
 
                     /**
                      * If the new value is eligible for use as a vm,
@@ -864,7 +919,7 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
                 }
             }
 
-            data[key] = processValue(data[key] ? data[key].valueOf() : data[key]);
+            data[key] = processValue(data[key]);
 
             Object.defineProperty(vm, key, {
                 get: get,
@@ -888,8 +943,10 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
      * @return {Object} vm
      */
     function component(vm, tmpl, selector) {
+        var _arguments = arguments;
 
-        if (typeof vm === 'string') {
+
+        if (_typeof(vm, 'string')) {
 
             vm = { _el: parse(vm) };
 
@@ -901,9 +958,9 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
             vm._el = render(parse(tmpl), vm);
         }
 
-        if (typeof selector === 'string') {
+        if (_typeof(selector, 'string') || selector && selector.tagName) {
 
-            var app = uav(selector);
+            var app = selector.tagName ? selector : uav(selector);
 
             var oldComponent = app.firstElementChild;
 
@@ -916,14 +973,22 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
             app.appendChild(vm._el);
         }
 
-        for (var i = 0; i < arguments.length; i++) {
+        var _loop = function _loop(i) {
 
-            if (typeof arguments[i] === 'function') {
+            if (_typeof(_arguments[i], 'function')) {
 
-                arguments[i](vm._el);
+                requestAnimationFrame(function () {
+                    return _arguments[i](vm._el);
+                });
 
-                break;
+                return 'break';
             }
+        };
+
+        for (var i = 0; i < arguments.length; i++) {
+            var _ret = _loop(i);
+
+            if (_ret === 'break') break;
         }
 
         return vm;
@@ -939,10 +1004,10 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
     /**
      * Methods intended for public use
      */
+    uav.all = all;
     uav.component = component;
     uav.model = model;
     uav.parse = parse;
-    uav.placeholder = placeholder;
     uav.setTag = setTag;
     uav.unbind = unbind;
 
