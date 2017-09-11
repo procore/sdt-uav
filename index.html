@@ -71,12 +71,12 @@ a {
 <p>uav aims to demonstrate that complexity is a problem in today's front end codebases. Think of it as an alternative to React, Vue, or Angular, but easier to use, and only 2KB compressed.</p>
 <ul>
 <li><a href="#hello-world">Hello World</a></li>
+<li><a href="#todo-app">Todo App</a></li>
 <li><a href="#creating-a-component">Creating a Component</a></li>
 <li><a href="#template-expressions">Template Expressions</a>
 <ul>
 <li><a href="#text-expressions">Text Expressions</a></li>
 <li><a href="#attribute-expressions">Attribute Expressions</a></li>
-<li><a href="#boolean-attributes">Boolean Attributes</a></li>
 <li><a href="#template-loops">Template Loops</a></li>
 </ul>
 </li>
@@ -89,6 +89,7 @@ a {
 <ul>
 <li><a href="#uav-src">uav-src</a></li>
 <li><a href="#uav-style">uav-style</a></li>
+<li><a href="#uav-attr">uav-attr</a></li>
 </ul>
 </li>
 <li><a href="#dom-access">DOM Access</a></li>
@@ -115,6 +116,8 @@ component.message = 'Goodbye, world.';
 // ... the HTML automatically updates:
 &lt;h1&gt;Goodbye, world.&lt;/h1&gt;
 </code></pre>
+<h2><a id="todo-app"></a>Todo App</h2>
+<p><a href="http://jsfiddle.net/t16bzg3m/11/">Click here for the live example</a></p>
 <h2><a id="creating-a-component"></a>Creating a Component</h2>
 <p><code>uav.component(model, template, selector, callback)</code></p>
 <p>Arguments:</p>
@@ -161,15 +164,6 @@ component.message = 'Goodbye, world.';
 <blockquote>
 <p>If an expression evaluates to a boolean, it will render nothing if false, or the property name if true. This makes toggling the "visible" class on the above <code>&lt;div&gt;</code> as easy as <code>component.visble = !component.visible</code>.</p>
 </blockquote>
-<h3><a id="boolean-attributes"></a>Boolean Attributes</h3>
-<pre><code>uav.component(
-    { disabled: true },
-    `&lt;input type="text" {disabled}&gt;`
-);
-
-// Renders:
-&lt;input type="text" disabled&gt;
-</code></pre>
 <h3><a id="template-loops"></a>Template Loops</h3>
 <p>Use the <code>uav-loop</code> and <code>uav-as</code> attributes to loop over an array as follows:</p>
 <pre><code>uav.component({
@@ -315,6 +309,25 @@ const component = uav.component(model, '&lt;div class="item {isActive() ? 'activ
 <p><code>uav.component('&lt;div style="left: {left}px"&gt;&lt;/div&gt;');</code></p>
 <p>To support Internet Explorer, you can use the <code>uav-style</code> attribute instead:</p>
 <p><code>uav.component('&lt;div uav-style="left: {left}px"&gt;&lt;/div&gt;');</code></p>
+<h3><a id="uav-attr"></a>uav-attr</h3>
+<p>Use the <code>uav-attr</code> attribute to bind a boolean attribute on an element.</p>
+<pre><code>uav.component(
+    { disabled: true },
+    `&lt;input type="text" uav-attr="{disabled}"&gt;`
+);
+
+// Renders:
+&lt;input type="text" disabled&gt;
+</code></pre>
+<p>Just because these are called boolean attributes doesn't mean they have to bound to a boolean value. Here's an example that uses a string:</p>
+<pre><code>uav.component(
+    { ariaProp: 'hidden' },
+    `&lt;input type="text" uav-attr="{'aria-' + ariaProp}"&gt;`
+);
+
+// Renders:
+&lt;input type="text" aria-hidden&gt;
+</code></pre>
 <h2><a id="dom-access"></a>DOM Access</h2>
 <p>Elements can be accessed directly by passing a selector to the <code>uav</code> or <code>uav.all</code> functions.</p>
 <p>Access the first matched element:</p>
