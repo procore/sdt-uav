@@ -321,10 +321,6 @@ Run a callback on all matched elements:
 
 `uav('.item', item => item.classList.toggle('visible'));`
 
-Access the nth matched element:
-
-`uav('.item', 3).classList.toggle('visible');`
-
 Get an array of all matched elements:
 
 `uav.all('.item').forEach(item => item.classList.toggle('visible'));`

@@ -38,6 +38,9 @@ pre {
 code {
     word-break: break-word;
 }
+pre code {
+    word-break: normal;
+}
 a {
     color: #4770c1;
     text-decoration: none;
@@ -301,8 +304,6 @@ const component = uav.component(model, '&lt;div class="item {isActive() ? 'activ
 <p><code>uav('.item').classList.toggle('visible');</code></p>
 <p>Run a callback on all matched elements:</p>
 <p><code>uav('.item', item =&gt; item.classList.toggle('visible'));</code></p>
-<p>Access the nth matched element:</p>
-<p><code>uav('.item', 3).classList.toggle('visible');</code></p>
 <p>Get an array of all matched elements:</p>
 <p><code>uav.all('.item').forEach(item =&gt; item.classList.toggle('visible'));</code></p>
 <h2><a id="two-way-data-binding"></a>Two Way Data Binding</h2>

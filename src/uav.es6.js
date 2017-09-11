@@ -126,26 +126,20 @@
     /**
      * Selects an array of DOM nodes using a CSS selector.
      * - act on all matched elements:       uav.all('.items', el => el.classList.add('active'));
-     * - act on the nth matched element:    uav.all('.items', 2).classList.add('active'));
+     * - act on the nth matched element:    uav.all('.items')[2].classList.add('active'));
      * - return all matched elements:       uav.all('.items').forEach(el => el.classList.add('active'));
      * 
      * @param  {String} selector - the CSS selector to search for
-     * @param  {(Function|Number)} fnOrIndex (optional)
-     *          - a callback, passed all matched nodes, OR
-     *          - the index of the matched node to return.
+     * @param  {(Function)} callback (optional) a callback, passed all matched nodes.
      * @return {Array}
      */
-    function all(selector, fnOrIndex) {
+    function all(selector, callback) {
 
         const els = Array.from(document.querySelectorAll(selector));
 
-        if (_typeof(fnOrIndex, 'function')) {
+        if (callback) {
 
-            return els.forEach(fnOrIndex);
-
-        } else if (_typeof(fnOrIndex, 'number')) {
-
-            return els[fnOrIndex];
+            return els.forEach(callback);
 
         }
 
@@ -157,19 +151,16 @@
      * uav is a global utility for selecting DOM nodes using a CSS selector.
      * - act on the first matched element:  uav('#item').classList.add('active');
      * - act on all matched elements:       uav('.items', el => el.classList.add('active'));
-     * - act on the nth matched element:    uav('.items', 2).classList.add('active'));
      * 
      * @param  {String} selector - the CSS selector to search for
-     * @param  {(Function|Number)} fnOrIndex (optional)
-     *          - a callback, passed all matched nodes, OR
-     *          - the index of the matched node to return.
+     * @param  {(Function)} callback (optional) a callback, passed all matched nodes.
      * @return {(Array|Element)}
      */
-    const uav = window.uav = (selector, fnOrIndex) => {
+    const uav = window.uav = (selector, callback) => {
 
-        if (fnOrIndex !== undefined) {
+        if (callback) {
 
-            return all(selector, fnOrIndex);
+            return all(selector, callback);
 
         }
 
