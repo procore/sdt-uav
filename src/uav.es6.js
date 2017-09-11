@@ -30,11 +30,11 @@
     let currentNode;
 
     /**
-     * attributes is a list of functions for handling element attributes.
+     * attributes is a list of functions for parsing element attributes.
      * It can be extended with uav.attributes.push(<Function>) to support
-     * new attribute bindings (this is how uav.2way.js works).
+     * new attribute binding types (this is how uav-bind.js works).
      *
-     * Attribute functions are passed the following parameters:
+     * Attribute parsers are passed the following parameters:
      * - node: the element on which the attribute appears
      * - attribute: an object with name and value properties
      * - vm: the view model against which attribute expressions should be evaluated
@@ -61,15 +61,19 @@
 
     /**
      * createElement wraps document.createElement. 
-     * This is just to remove a few bytes in minified scripts.
+     * This is just to remove a few bytes in the mangled output.
      * 
      * @param  {String} tag - The type of element to create
      * @return {Element}
      */
     const createElement = tag => document.createElement(tag);
 
-    /*
-     * Wrap typeof to simplify dealing with verbose babel transforms.
+    /**
+     * Wrapping typeof saves a handful of bits too.
+     *
+     * @param {any} val - a value
+     * @param {String} type - a primitive type
+     * @return {Boolean}
      */
     const _typeof = (val, type) => typeof val === type;
 
@@ -175,6 +179,7 @@
      * 
      * @param {String} open - the opening tag
      * @param {String} close - the closing tag
+     * @return {undefined}
      */
     function setTag(open, close) {
 
@@ -308,7 +313,7 @@
 
                     }
 
-                    let value = evaluate(code, vm, loopMethods);
+                    let value = evaluate(code, vm);
 
                     if (loopMethods) {
 

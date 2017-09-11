@@ -29,11 +29,11 @@
     var currentNode = void 0;
 
     /**
-     * attributes is a list of functions for handling element attributes.
+     * attributes is a list of functions for parsing element attributes.
      * It can be extended with uav.attributes.push(<Function>) to support
-     * new attribute bindings (this is how uav.2way.js works).
+     * new attribute binding types (this is how uav-bind.js works).
      *
-     * Attribute functions are passed the following parameters:
+     * Attribute parsers are passed the following parameters:
      * - node: the element on which the attribute appears
      * - attribute: an object with name and value properties
      * - vm: the view model against which attribute expressions should be evaluated
@@ -60,7 +60,7 @@
 
     /**
      * createElement wraps document.createElement. 
-     * This is just to remove a few bytes in minified scripts.
+     * This is just to remove a few bytes in the mangled output.
      * 
      * @param  {String} tag - The type of element to create
      * @return {Element}
@@ -69,8 +69,12 @@
         return document.createElement(tag);
     };
 
-    /*
-     * Wrap typeof to simplify dealing with verbose babel transforms.
+    /**
+     * Wrapping typeof saves a handful of bits too.
+     *
+     * @param {any} val - a value
+     * @param {String} type - a primitive type
+     * @return {Boolean}
      */
     var _typeof = function _typeof(val, type) {
         return typeof val === type;
@@ -133,25 +137,20 @@
     /**
      * Selects an array of DOM nodes using a CSS selector.
      * - act on all matched elements:       uav.all('.items', el => el.classList.add('active'));
-     * - act on the nth matched element:    uav.all('.items', 2).classList.add('active'));
+     * - act on the nth matched element:    uav.all('.items')[2].classList.add('active'));
      * - return all matched elements:       uav.all('.items').forEach(el => el.classList.add('active'));
      * 
      * @param  {String} selector - the CSS selector to search for
-     * @param  {(Function|Number)} fnOrIndex (optional)
-     *          - a callback, passed all matched nodes, OR
-     *          - the index of the matched node to return.
+     * @param  {(Function)} callback (optional) a callback, passed all matched nodes.
      * @return {Array}
      */
-    function all(selector, fnOrIndex) {
+    function all(selector, callback) {
 
         var els = Array.from(document.querySelectorAll(selector));
 
-        if (_typeof(fnOrIndex, 'function')) {
+        if (callback) {
 
-            return els.forEach(fnOrIndex);
-        } else if (_typeof(fnOrIndex, 'number')) {
-
-            return els[fnOrIndex];
+            return els.forEach(callback);
         }
 
         return els;
@@ -161,19 +160,16 @@
      * uav is a global utility for selecting DOM nodes using a CSS selector.
      * - act on the first matched element:  uav('#item').classList.add('active');
      * - act on all matched elements:       uav('.items', el => el.classList.add('active'));
-     * - act on the nth matched element:    uav('.items', 2).classList.add('active'));
      * 
      * @param  {String} selector - the CSS selector to search for
-     * @param  {(Function|Number)} fnOrIndex (optional)
-     *          - a callback, passed all matched nodes, OR
-     *          - the index of the matched node to return.
+     * @param  {(Function)} callback (optional) a callback, passed all matched nodes.
      * @return {(Array|Element)}
      */
-    var uav = window.uav = function (selector, fnOrIndex) {
+    var uav = window.uav = function (selector, callback) {
 
-        if (fnOrIndex !== undefined) {
+        if (callback) {
 
-            return all(selector, fnOrIndex);
+            return all(selector, callback);
         }
 
         return document.querySelector(selector) || createElement('div');
@@ -186,6 +182,7 @@
      * 
      * @param {String} open - the opening tag
      * @param {String} close - the closing tag
+     * @return {undefined}
      */
     function setTag(open, close) {
 
@@ -312,7 +309,7 @@
                         currentBinding = binding;
                     }
 
-                    var value = evaluate(code, vm, loopMethods);
+                    var value = evaluate(code, vm);
 
                     if (loopMethods) {
 
