@@ -1,4 +1,4 @@
-![uav logo](https://uav.js.org/uav.png)
+![uav logo](https://uav.js.org/images/uav.small.png)
 
 uav aims to demonstrate that complexity is a problem in today's front end codebases. Think of it as an alternative to React, Vue, or Angular, but easier to use, and only 2KB compressed.
 
