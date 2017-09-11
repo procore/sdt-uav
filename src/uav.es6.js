@@ -568,12 +568,12 @@
      */
     attributes.push((node, attribute) => {
 
-        if (attribute.name.match(uav.expRX)) {
+        if (attribute.name === 'uav-attr') {
 
             let property;
 
             return {
-                tmpl: attribute.name,
+                tmpl: attribute.value,
                 replace: value => {
 
                     if (property) {

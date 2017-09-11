@@ -1,4 +1,5 @@
 - test two way binding on all input types
+- two way binding probably doesn't work in loops
 - consider batch updates / async rendering
 
 - test.html should be removed

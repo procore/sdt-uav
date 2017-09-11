@@ -534,12 +534,12 @@
      */
     attributes.push(function (node, attribute) {
 
-        if (attribute.name.match(uav.expRX)) {
+        if (attribute.name === 'uav-attr') {
 
             var property = void 0;
 
             return {
-                tmpl: attribute.name,
+                tmpl: attribute.value,
                 replace: function replace(value) {
 
                     if (property) {

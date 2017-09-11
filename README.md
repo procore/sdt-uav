@@ -3,10 +3,11 @@
 uav aims to demonstrate that complexity is a problem in today's front end codebases. Think of it as an alternative to React, Vue, or Angular, but easier to use, and only 2KB compressed.
 
 * [Hello World](#hello-world)
+* [Todo App](#todo-app)
 * [Creating a Component](#creating-a-component)
 * [Template Expressions](#template-expressions)
+  * [Text Expressions](#text-expressions)
   * [Attribute Expressions](#attribute-expressions)
-  * [Boolean Attributes](#boolean-attributes)
   * [Template Loops](#template-loops)
 * [Events](#events)
 * [Child Components](#child-components)
@@ -16,6 +17,7 @@ uav aims to demonstrate that complexity is a problem in today's front end codeba
 * [Special Attributes](#special-attributes)
   * [uav-src](#uav-src)
   * [uav-style](#uav-style)
+  * [uav-attr](#uav-attr)
 * [DOM Access](#dom-access)
 * [Two Way Data Binding](#two-way-data-binding)
 * [Performance Notes](#performance-notes)
@@ -41,6 +43,10 @@ component.message = 'Goodbye, world.';
 // ... the HTML automatically updates:
 <h1>Goodbye, world.</h1>
 ```
+
+## Todo App
+
+[Click here for the live example](http://jsfiddle.net/t16bzg3m/11/)
 
 ## Creating a Component
 
@@ -93,17 +99,6 @@ const component = uav.component({
 ```
 
 > If an expression evaluates to a boolean, it will render nothing if false, or the property name if true. This makes toggling the "visible" class on the above `<div>` as easy as `component.visble = !component.visible`.
-
-### Boolean Attributes
-```
-uav.component(
-    { disabled: true },
-    `<input type="text" {disabled}>`
-);
-
-// Renders:
-<input type="text" disabled>
-```
 
 ### Template Loops
 
@@ -308,6 +303,32 @@ Internet Explorer can be extremely picky about the value of an inline `style` ta
 To support Internet Explorer, you can use the `uav-style` attribute instead:
 
 `uav.component('<div uav-style="left: {left}px"></div>');`
+
+### uav-attr
+
+Use the `uav-attr` attribute to bind a boolean attribute on an element.
+
+```
+uav.component(
+    { disabled: true },
+    `<input type="text" uav-attr="{disabled}">`
+);
+
+// Renders:
+<input type="text" disabled>
+```
+
+Just because these are called boolean attributes doesn't mean they have to bound to a boolean value. Here's an example that uses a string:
+
+```
+uav.component(
+    { ariaProp: 'hidden' },
+    `<input type="text" uav-attr="{'aria-' + ariaProp}">`
+);
+
+// Renders:
+<input type="text" aria-hidden>
+```
 
 ## DOM Access
 
