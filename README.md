@@ -3,6 +3,7 @@
 uav aims to demonstrate that complexity is a problem in today's front end codebases. Think of it as an alternative to React, Vue, or Angular, but easier to use, and only 2KB compressed.
 
 * [Hello World](#hello-world)
+* [Creating a Component](#creating-a-component)
 * [Template Expressions](#template-expressions)
   * [Attribute Expressions](#attribute-expressions)
   * [Boolean Attributes](#boolean-attributes)
@@ -41,7 +42,7 @@ component.message = 'Goodbye, world.';
 <h1>Goodbye, world.</h1>
 ```
 
-## `uav.component`
+## Creating a Component
 
 `uav.component(model, template, selector, callback)`
 

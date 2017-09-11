@@ -9,23 +9,15 @@
 <style type="text/css">
 body {
     margin: 0;
-    padding: 0;
     font-family: Georgia, serif;
     font-size: 16px;
     line-height: 1.7;
     color: #4c4c4c;
-    background: #3a3a3a;
-}
-#wrapper {
     background-color: #efefef;
-    position: fixed;
-    top: 3px;
-    left: 0;
-    overflow-y: scroll;
     padding: 80px 10%;
-    height: calc(100% - 3px);
-    width: 100%;
-    box-sizing: border-box;
+}
+svg {
+    display: none;
 }
 blockquote {
     padding: 0 20px;
@@ -54,7 +46,6 @@ a {
     text-decoration: none;
 }
 </style>
-<div id="wrapper">
 <div class="center">
 <img src="./images/uav.png" width="181"/>
 <p>
@@ -62,10 +53,35 @@ a {
 </p>
 </div>
 <p>uav aims to demonstrate that complexity is a problem in today's front end codebases. Think of it as an alternative to React, Vue, or Angular, but easier to use, and only 2KB compressed.</p>
+<ul>
+<li><a href="#hello-world">Hello World</a></li>
+<li><a href="#template-expressions">Template Expressions</a>
+<ul>
+<li><a href="#attribute-expressions">Attribute Expressions</a></li>
+<li><a href="#boolean-attributes">Boolean Attributes</a></li>
+<li><a href="#template-loops">Template Loops</a></li>
+</ul>
+</li>
+<li><a href="#events">Events</a></li>
+<li><a href="#child-components">Child Components</a></li>
+<li><a href="#passing-data-to-children">Passing Data to Children</a></li>
+<li><a href="#creating-a-model">Creating a Model</a></li>
+<li><a href="#binding-html">Binding HTML</a></li>
+<li><a href="#special-attributes">Special Attributes</a>
+<ul>
+<li><a href="#uav-src">uav-src</a></li>
+<li><a href="#uav-style">uav-style</a></li>
+</ul>
+</li>
+<li><a href="#dom-access">DOM Access</a></li>
+<li><a href="#two-way-data-binding">Two Way Data Binding</a></li>
+<li><a href="#performance-notes">Performance Notes</a></li>
+<li><a href="#browser-compatibility">Browser Compatibility</a></li>
+</ul>
 <blockquote>
 <p>The goal of uav is not adoption. The goal is to show that the problems faced by modern web apps are not complex enough to justify the millions of developer hours our industry has invested complicated frameworks.</p>
 </blockquote>
-<h2>Hello World</h2>
+<h2><a id="user-content-hello-world" class="anchor" href="#hello-world" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Hello World</h2>
 <pre><code>const component = uav.component(
     { message: 'Hello, world!' }, 
     `&lt;h1&gt;{message}&lt;/h1&gt;`, 
@@ -81,7 +97,7 @@ component.message = 'Goodbye, world.';
 // ... the HTML automatically updates:
 &lt;h1&gt;Goodbye, world.&lt;/h1&gt;
 </code></pre>
-<h2><code>uav.component</code></h2>
+<h2><a id="user-content-uavcomponent" class="anchor" href="#uavcomponent" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>uav.component</code></h2>
 <p><code>uav.component(model, template, selector, callback)</code></p>
 <p>Arguments:</p>
 <ul>
@@ -92,7 +108,7 @@ component.message = 'Goodbye, world.';
 </ul>
 <p>Returns the model.</p>
 <p>Changes to existing properties on the model will trigger an optimized re-render. Only the smallest DOM change possible will occur, down to the level of updating a single element attribute or text node. This is accomplished without any DOM diffing, because uav constructs a tree of closures that know exactly what needs to be updated whenever a particular property is changed.</p>
-<h2>Template Expressions</h2>
+<h2><a id="user-content-template-expressions" class="anchor" href="#template-expressions" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Template Expressions</h2>
 <p>By default, uav expressions use <code>{curly}</code> notation. Any browser-supported JavaScript can be used in an any expression. The result of the expression should be one of the following:</p>
 <ul>
 <li>String</li>
@@ -107,13 +123,13 @@ component.message = 'Goodbye, world.';
 <blockquote>
 <p>You can change the template tag syntax with <code>uav.setTag()</code>. For example, to use <code>{{mustache}}</code> notation, call <code>uav.setTag('{{', '}}')</code> before creating any components.</p>
 </blockquote>
-<h3>Text Expressions:</h3>
+<h3><a id="user-content-text-expressions" class="anchor" href="#text-expressions" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Text Expressions:</h3>
 <pre><code>uav.component(
     { content: 'foo' },
     `&lt;div&gt;This is a content expression: {content}&lt;/div&gt;`
 );
 </code></pre>
-<h3>Attribute Expressions:</h3>
+<h3><a id="user-content-attribute-expressions" class="anchor" href="#attribute-expressions" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Attribute Expressions:</h3>
 <pre><code>const component = uav.component({
     visible: true,
     className: 'component'
@@ -127,7 +143,7 @@ component.message = 'Goodbye, world.';
 <blockquote>
 <p>If an expression evaluates to a boolean, it will render nothing if false, or the property name if true. This makes toggling the "visible" class on the above <code>&lt;div&gt;</code> as easy as <code>component.visble = !component.visible</code>.</p>
 </blockquote>
-<h3>Boolean Attributes</h3>
+<h3><a id="user-content-boolean-attributes" class="anchor" href="#boolean-attributes" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Boolean Attributes</h3>
 <pre><code>uav.component(
     { disabled: true },
     `&lt;input type="text" {disabled}&gt;`
@@ -136,7 +152,7 @@ component.message = 'Goodbye, world.';
 // Renders:
 &lt;input type="text" disabled&gt;
 </code></pre>
-<h3>Template Loops</h3>
+<h3><a id="user-content-template-loops" class="anchor" href="#template-loops" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Template Loops</h3>
 <p>Use the <code>uav-loop</code> and <code>uav-as</code> attributes to loop over an array as follows:</p>
 <pre><code>uav.component({
     items: [ 1, 2, 'three' ]
@@ -176,7 +192,7 @@ component.message = 'Goodbye, world.';
 <li>Array methods that modify the array like <code>push</code> and <code>splice</code> will trigger a re-render of the loop.</li>
 <li>Curly braces are optional in the <code>uav-loop</code> and <code>uav-as</code> attributes, since we know the values will always be template expressions.</li>
 </ul>
-<h3>Events</h3>
+<h3><a id="user-content-events" class="anchor" href="#events" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Events</h3>
 <pre><code>uav.component(
     { click: e =&gt; console.log(e) }, 
     `&lt;button onclick="{click}"&gt;Click me&lt;/button&gt;`
@@ -192,7 +208,7 @@ component.message = 'Goodbye, world.';
     &lt;/ul&gt;
 `)
 </code></pre>
-<h2>Child Components</h2>
+<h2><a id="user-content-child-components" class="anchor" href="#child-components" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Child Components</h2>
 <p>A component can be rendered into other components.</p>
 <pre><code>const child = uav.component(`&lt;h3&gt;I am a child.&lt;/h3&gt;`);
 
@@ -210,7 +226,7 @@ uav.component(
     &lt;h3&gt;I am a child.&lt;/h3&gt;
 &lt;/div&gt;
 </code></pre>
-<h3>Passing Data to Children</h3>
+<h3><a id="user-content-passing-data-to-children" class="anchor" href="#passing-data-to-children" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Passing Data to Children</h3>
 <pre><code>const child = data =&gt; uav.component(
     { data }, 
     `&lt;em&gt;{data}&lt;/em&gt;`
@@ -241,7 +257,7 @@ uav.component({
 &lt;/div&gt;
 </code></pre>
 <p>uav supports swapping child components on the fly. For example, you could call <code>component.child = someOtherComponent</code> and the view will update accordingly. Just remember that uav is aggressive about avoiding memory leaks, and will remove any bindings that were attached to the original component before it was replaced.</p>
-<h2>Creating a Model</h2>
+<h2><a id="user-content-creating-a-model" class="anchor" href="#creating-a-model" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Creating a Model</h2>
 <p>If you want to create a view model before associating it with a template, use <code>uav.model</code>. It can come in handy when a model refers to itself at render time.</p>
 <pre><code>const model = uav.model({
     active: true,
@@ -262,7 +278,7 @@ const component = uav.component(model, '&lt;div class="item {isActive() ? 'activ
     '&lt;div class="item {active}"&gt;&lt;/div&gt;'
 );
 </code></pre>
-<h3>Binding HTML</h3>
+<h3><a id="user-content-binding-html" class="anchor" href="#binding-html" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Binding HTML</h3>
 <p>To render an HTML string as a DOM element, you can use <code>uav.parse()</code>.</p>
 <pre><code>uav.component({
     html: uav.parse('&lt;script&gt;location="https://en.wikipedia.org/wiki/Cross-site_scripting"&lt;/script&gt;')
@@ -270,18 +286,18 @@ const component = uav.component(model, '&lt;div class="item {isActive() ? 'activ
     `&lt;div&gt;{html}&lt;/div&gt;`
 );
 </code></pre>
-<h2>Special Attributes</h2>
-<h3>uav-src</h3>
+<h2><a id="user-content-special-attributes" class="anchor" href="#special-attributes" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Special Attributes</h2>
+<h3><a id="user-content-uav-src" class="anchor" href="#uav-src" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>uav-src</h3>
 <p>Imagine that an image's source is bound to a template expression:</p>
 <p><code>uav.component('&lt;img src="{imageSource}" /&gt;');</code></p>
 <p>To prevent your browser from making a request to <code>/{imageSource}</code> before your JavaScript runs, you can use the <code>uav-src</code> attribute.</p>
 <p><code>uav.component('&lt;img uav-src="{imageSource}" /&gt;');</code></p>
-<h3>uav-style</h3>
+<h3><a id="user-content-uav-style" class="anchor" href="#uav-style" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>uav-style</h3>
 <p>Internet Explorer can be extremely picky about the value of an inline <code>style</code> tag. A template expression like the following will work in any browser except IE:</p>
 <p><code>uav.component('&lt;div style="left: {left}px"&gt;&lt;/div&gt;');</code></p>
 <p>To support Internet Explorer, you can use the <code>uav-style</code> attribute instead:</p>
 <p><code>uav.component('&lt;div uav-style="left: {left}px"&gt;&lt;/div&gt;');</code></p>
-<h2>DOM Access</h2>
+<h2><a id="user-content-dom-access" class="anchor" href="#dom-access" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>DOM Access</h2>
 <p>Elements can be accessed directly by passing a selector to the <code>uav</code> or <code>uav.all</code> functions.</p>
 <p>Access the first matched element:</p>
 <p><code>uav('.item').classList.toggle('visible');</code></p>
@@ -291,7 +307,7 @@ const component = uav.component(model, '&lt;div class="item {isActive() ? 'activ
 <p><code>uav('.item', 3).classList.toggle('visible');</code></p>
 <p>Get an array of all matched elements:</p>
 <p><code>uav.all('.item').forEach(item =&gt; item.classList.toggle('visible'));</code></p>
-<h2>Two Way Data Binding</h2>
+<h2><a id="user-content-two-way-data-binding" class="anchor" href="#two-way-data-binding" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Two Way Data Binding</h2>
 <p>Two way binding is cool, but is only applicable to form interfaces, and can encourage lazy coding practices. Furthermore, it requires creating <code>oninput</code> event listeners behind the scenes, when often your use case only requires <code>change</code> or <code>submit</code> listeners. For these reasons it is included as a separate file, <code>uav-bind.js</code>.</p>
 <p>After including this file, any HTML input types that support the <code>value</code> property can be two-way bound using the <code>uav-bind</code> attribute. When a user changes a value, the model will automatically update to reflect it.</p>
 <pre><code>uav.component(
@@ -311,8 +327,8 @@ const component = uav.component(model, '&lt;div class="item {isActive() ? 'activ
 <blockquote>
 <p><code>uav-bind.js</code> is 0.5KB compressed.</p>
 </blockquote>
-<h2>Performance Notes</h2>
-<h3>Only bind data when you have to</h3>
+<h2><a id="user-content-performance-notes" class="anchor" href="#performance-notes" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Performance Notes</h2>
+<h3><a id="user-content-only-bind-data-when-you-have-to" class="anchor" href="#only-bind-data-when-you-have-to" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Only bind data when you have to</h3>
 <p>Avoid putting any data on the model that doesn't need to be bound to the DOM. If a particular value will never change, or changes to it don't need to update the DOM, just use a regular ES6 template variable to reference it (put a dollar sign in front of the expression).</p>
 <pre><code>const wontChange = 'hi!';
 
@@ -325,18 +341,17 @@ uav.component({
     &lt;/div&gt;
 `)
 </code></pre>
-<h3>Unbind any DOM nodes you've manually detached</h3>
+<h3><a id="user-content-unbind-any-dom-nodes-youve-manually-detached" class="anchor" href="#unbind-any-dom-nodes-youve-manually-detached" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Unbind any DOM nodes you've manually detached</h3>
 <p>When uav updates the DOM as a result of a change to a model, it automatically removes any bindings to DOM nodes that have been removed or replaced. However, if for some reason you manually remove or replace a bound DOM node, you can clean up any bindings associated with it by calling <code>uav.unbind(&lt;Element&gt;)</code>. There is no harm in calling <code>uav.unbind</code> on an element that does not have any associated bindings.</p>
-<h2>Collapsing Whitespace</h2>
+<h2><a id="user-content-collapsing-whitespace" class="anchor" href="#collapsing-whitespace" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Collapsing Whitespace</h2>
 <p>Using multiline template strings creates unnecessary whitespace in your JavaScript files. To collapse this whitespace, add a step like this to your build process:</p>
 <p><code>tr -s " " &lt; dist/bundle.js &gt; dist/tmp &amp;&amp; mv dist/tmp dist/bundle.js</code></p>
-<h2>Browser Compatibility</h2>
+<h2><a id="user-content-browser-compatibility" class="anchor" href="#browser-compatibility" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Browser Compatibility</h2>
 <p>IE9+</p>
-<h2>Coming Soon</h2>
+<h2><a id="user-content-coming-soon" class="anchor" href="#coming-soon" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Coming Soon</h2>
 <ul>
 <li>uav-router: The simplest possible routing solution for single page apps</li>
 <li>uav-server: Render your uav apps from Node to make them search-engine friendly.</li>
 </ul>
-</div>
 </body>
 </html>
