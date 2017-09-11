@@ -9,42 +9,58 @@
 <style type="text/css">
 body {
     margin: 0;
-    padding: 5% 10%;
-    font-family: Courier New, monospace;
-    font-size: 14px;
-    line-height: 1.5;
+    padding: 0;
+    font-family: Georgia, serif;
+    font-size: 16px;
+    line-height: 1.7;
     color: #4c4c4c;
+    background: #3a3a3a;
+}
+#wrapper {
     background-color: #efefef;
+    position: fixed;
+    top: 3px;
+    left: 0;
+    overflow-y: scroll;
+    padding: 80px 10%;
+    height: calc(100% - 3px);
+    width: 100%;
+    box-sizing: border-box;
 }
 blockquote {
+    padding: 0 20px;
+    margin: 0;
+    border: 1px solid gainsboro;
     border-left: 3px solid #ccc;
-    padding-left: 20px;
-    margin-left: 0;
+    background: #f3f3f3;
 }
 pre {
-    background: #e9eaec;
-    display: inline-block;
-    padding: 20px 30px;
-    border-radius: 4px;
-    color: #616161;
-    margin: 0;
-    box-shadow: inset 1px 1px 9px #dcdcdc;
+    background: #3a3a3a;
+    padding: 20px 25px;
+    color: #efefef;
     overflow-x: scroll;
-    max-width: 100%;
-    box-sizing: border-box;
+    font-size: 14px;
+    border: 1px solid black;
 }
 .center {
     text-align: center;
     margin-bottom: 25px;
 }
+code {
+    word-break: break-word;
+}
+a {
+    color: #4770c1;
+    text-decoration: none;
+}
 </style>
+<div id="wrapper">
 <div class="center">
-<h1>uav</h1>
+<img src="./uav.png" width="181"/>
 <p>
 <a href="https://github.com/unearth-inc/uav">github</a> | <a href="https://www.npmjs.com/package/uav">npm</a>
 </p>
 </div>
-<h1>uav</h1>
 <p>uav aims to demonstrate that complexity is a problem in today's front end codebases. Think of it as an alternative to React, Vue, or Angular, but easier to use, and only 2KB compressed.</p>
 <blockquote>
 <p>The goal of uav is not adoption. The goal is to show that the problems faced by modern web apps are not complex enough to justify the millions of developer hours our industry has invested complicated frameworks.</p>
@@ -91,13 +107,13 @@ component.message = 'Goodbye, world.';
 <blockquote>
 <p>You can change the template tag syntax with <code>uav.setTag()</code>. For example, to use <code>{{mustache}}</code> notation, call <code>uav.setTag('{{', '}}')</code> before creating any components.</p>
 </blockquote>
-<h3>Text expressions:</h3>
+<h3>Text Expressions:</h3>
 <pre><code>uav.component(
     { content: 'foo' },
     `&lt;div&gt;This is a content expression: {content}&lt;/div&gt;`
 );
 </code></pre>
-<h3>Attribute expressions:</h3>
+<h3>Attribute Expressions:</h3>
 <pre><code>const component = uav.component({
     visible: true,
     className: 'component'
@@ -111,7 +127,7 @@ component.message = 'Goodbye, world.';
 <blockquote>
 <p>If an expression evaluates to a boolean, it will render nothing if false, or the property name if true. This makes toggling the "visible" class on the above <code>&lt;div&gt;</code> as easy as <code>component.visble = !component.visible</code>.</p>
 </blockquote>
-<h4>Boolean attributes</h4>
+<h3>Boolean Attributes</h3>
 <pre><code>uav.component(
     { disabled: true },
     `&lt;input type="text" {disabled}&gt;`
@@ -225,8 +241,8 @@ uav.component({
 &lt;/div&gt;
 </code></pre>
 <p>uav supports swapping child components on the fly. For example, you could call <code>component.child = someOtherComponent</code> and the view will update accordingly. Just remember that uav is aggressive about avoiding memory leaks, and will remove any bindings that were attached to the original component before it was replaced.</p>
-<h2><code>uav.model</code></h2>
-<p>If you want to create a view model before associating it with a template, use this method. It can come in handy when a model refers to itself at render time.</p>
+<h2>Creating a Model</h2>
+<p>If you want to create a view model before associating it with a template, use <code>uav.model</code>. It can come in handy when a model refers to itself at render time.</p>
 <pre><code>const model = uav.model({
     active: true,
     isActive: () =&gt; model.active
@@ -275,7 +291,7 @@ const component = uav.component(model, '&lt;div class="item {isActive() ? 'activ
 <p><code>uav('.item', 3).classList.toggle('visible');</code></p>
 <p>Get an array of all matched elements:</p>
 <p><code>uav.all('.item').forEach(item =&gt; item.classList.toggle('visible'));</code></p>
-<h2>Two way data binding</h2>
+<h2>Two Way Data Binding</h2>
 <p>Two way binding is cool, but is only applicable to form interfaces, and can encourage lazy coding practices. Furthermore, it requires creating <code>oninput</code> event listeners behind the scenes, when often your use case only requires <code>change</code> or <code>submit</code> listeners. For these reasons it is included as a separate file, <code>uav-bind.js</code>.</p>
 <p>After including this file, any HTML input types that support the <code>value</code> property can be two-way bound using the <code>uav-bind</code> attribute. When a user changes a value, the model will automatically update to reflect it.</p>
 <pre><code>uav.component(
@@ -321,5 +337,6 @@ uav.component({
 <li>uav-router: The simplest possible routing solution for single page apps</li>
 <li>uav-server: Render your uav apps from Node to make them search-engine friendly.</li>
 </ul>
+</div>
 </body>
 </html>

@@ -1,6 +1,24 @@
-# uav
+![uav logo](https://uav.js.org/uav.png)
 
 uav aims to demonstrate that complexity is a problem in today's front end codebases. Think of it as an alternative to React, Vue, or Angular, but easier to use, and only 2KB compressed.
+
+* [Hello World](#hello-world)
+* [Template Expressions](#template-expressions)
+  * [Attribute Expressions](#attribute-expressions)
+  * [Boolean Attributes](#boolean-attributes)
+  * [Template Loops](#template-loops)
+* [Events](#events)
+* [Child Components](#child-components)
+* [Passing Data to Children](#passing-data-to-children)
+* [Creating a Model](#creating-a-model)
+* [Binding HTML](#binding-html)
+* [Special Attributes](#special-attributes)
+  * [uav-src](#uav-src)
+  * [uav-style](#uav-style)
+* [DOM Access](#dom-access)
+* [Two Way Data Binding](#two-way-data-binding)
+* [Performance Notes](#performance-notes)
+* [Browser Compatibility](#browser-compatibility)
 
 > The goal of uav is not adoption. The goal is to show that the problems faced by modern web apps are not complex enough to justify the millions of developer hours our industry has invested complicated frameworks. 
 
@@ -52,7 +70,7 @@ Regardless of what you are binding or where you are binding it, the syntax is al
 
 > You can change the template tag syntax with `uav.setTag()`. For example, to use `{{mustache}}` notation, call `uav.setTag('{{', '}}')` before creating any components.
 
-### Text expressions:
+### Text Expressions:
 ```
 uav.component(
     { content: 'foo' },
@@ -60,7 +78,7 @@ uav.component(
 );
 ```
 
-### Attribute expressions:
+### Attribute Expressions:
 ```
 const component = uav.component({
     visible: true,
@@ -75,7 +93,7 @@ const component = uav.component({
 
 > If an expression evaluates to a boolean, it will render nothing if false, or the property name if true. This makes toggling the "visible" class on the above `<div>` as easy as `component.visble = !component.visible`.
 
-#### Boolean attributes
+### Boolean Attributes
 ```
 uav.component(
     { disabled: true },
@@ -226,9 +244,9 @@ Either way, it will render the following:
 
 uav supports swapping child components on the fly. For example, you could call `component.child = someOtherComponent` and the view will update accordingly. Just remember that uav is aggressive about avoiding memory leaks, and will remove any bindings that were attached to the original component before it was replaced. 
 
-## `uav.model`
+## Creating a Model
 
-If you want to create a view model before associating it with a template, use this method. It can come in handy when a model refers to itself at render time.
+If you want to create a view model before associating it with a template, use `uav.model`. It can come in handy when a model refers to itself at render time.
 
 ```
 const model = uav.model({
@@ -310,7 +328,7 @@ Get an array of all matched elements:
 
 `uav.all('.item').forEach(item => item.classList.toggle('visible'));`
 
-## Two way data binding
+## Two Way Data Binding
 
 Two way binding is cool, but is only applicable to form interfaces, and can encourage lazy coding practices. Furthermore, it requires creating `oninput` event listeners behind the scenes, when often your use case only requires `change` or `submit` listeners. For these reasons it is included as a separate file, `uav-bind.js`.
 
