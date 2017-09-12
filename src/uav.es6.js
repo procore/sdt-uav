@@ -44,14 +44,6 @@
     const attributes = [];
 
     /**
-     * ARRAY_METHODS is a list of array methods that alter arrays in place.
-     * These methods are wrapped to trigger bindings.
-     * 
-     * @type {Array}
-     */
-    const ARRAY_METHODS = ['push', 'pop', 'reverse', 'shift', 'sort', 'splice', 'unshift'];
-
-    /**
      * INVALID_EXPRESSION is used to flag template expressions
      * that throw exceptions.
      * 
@@ -91,41 +83,6 @@
         writable: true,
         enumerable: false
     });
-
-    /**
-     * bindArrayMethod wraps the given method of the given array
-     * so that it will trigger bindings.
-     * 
-     * @param  {String} method - the name of the method to wrap
-     * @param  {Array} vm - the array on which to operate
-     * @param  {Function} set - the vm's setter descriptor
-     * @return {undefined}
-     */
-    function bindArrayMethod(method, vm, set) {
-
-        defineProp(vm, method, (...args) => {
-
-            Array.prototype[method].apply(vm, args);
-
-            set(Array.from(vm));
-
-        });
-
-    }
-
-    /**
-     * bindArrayMethods wraps a predefined list of array methods
-     * (ARRAY_METHODS) so that they will trigger bindings when called.
-     * 
-     * @param  {Array} vm - the array on which to operate
-     * @param  {Function} set - the vm's setter descriptor
-     * @return {undefined}
-     */
-    function bindArrayMethods(vm, set) {
-
-        ARRAY_METHODS.forEach(method => bindArrayMethod(method, vm, set));
-
-    }
 
     /**
      * Selects an array of DOM nodes using a CSS selector.
@@ -400,6 +357,8 @@
 
             const loopNode = parse(node.innerHTML, node);
 
+            node.innerHTML = '';
+
             /**
              * Babel's slice to array shim is ~200 bytes, so we'll use
              * old fashioned syntax here.
@@ -412,6 +371,18 @@
 
             node.removeAttribute('uav-as');
 
+            function remove(i) {
+
+                if (node.children[i]) {
+
+                    unbind(node.children[i]);
+
+                    node.children[i].remove();
+
+                }
+
+            }
+
             return {
                 loop: true,
                 tmpl: attribute.value,
@@ -420,13 +391,11 @@
 
                     list = model(list);
 
-                    Array.from(node.children).forEach(unbind);
-
-                    node.innerHTML = '';
-
-                    list.forEach((item, i) => {
+                    function addBinding(item, i, insert) {
 
                         function binding(doBind) {
+
+                            const childAtIndex = node.children[i];
 
                             const child = loopNode.cloneNode();
 
@@ -446,7 +415,7 @@
 
                                 set(_vm) {
 
-                                    _vm[as] = list[i];
+                                    _vm[as] = item;
                                     
                                     _vm[index] = i;
 
@@ -462,9 +431,15 @@
 
                             };
 
-                            if (node.children[i]) {
+                            if (insert && childAtIndex) {
 
-                                node.replaceChild(render(child, vm, loopMethods), node.children[i]);
+                                node.insertBefore(render(child, vm, loopMethods), childAtIndex);
+
+                            } else if (childAtIndex) {
+
+                                unbind(childAtIndex);
+
+                                node.replaceChild(render(child, vm, loopMethods), childAtIndex);
 
                             } else {
 
@@ -478,7 +453,101 @@
 
                         binding(true);
 
+                    }
+
+                    /**
+                     * Wrap native array methods that modify the
+                     * array in place, so that they will trigger
+                     * only the necessary bindings, without
+                     * re-rendering any existing elements.
+                     */
+                    defineProp(list, 'push', (...args) => {
+
+                        args = args.map(model);
+
+                        args.forEach((item, i) => addBinding(item, list.length + i, true));
+
+                        return Array.prototype.push.apply(list, args);
+
                     });
+
+                    defineProp(list, 'pop', () => {
+
+                        remove(list.length - 1);
+
+                        return Array.prototype.pop.apply(list);
+
+                    });
+
+                    defineProp(list, 'reverse', () => {
+
+                        Array.prototype.reverse.apply(list);
+
+                        const children = Array.from(node.children);
+
+                        for (let i = list.length - 1; i >= 0; i--) {
+
+                            node.appendChild(children[i]);
+
+                        }
+
+                        return list;
+
+                    });
+
+                    defineProp(list, 'shift', () => {
+
+                        remove(0);
+
+                        return Array.prototype.shift.apply(list);
+
+                    });
+
+                    defineProp(list, 'sort', sort => {
+
+                        const children = [];
+
+                        const temp = Array.from(list);
+
+                        Array.prototype.sort.call(list, sort);
+                        
+                        list.forEach(item => children.push(node.children[temp.indexOf(item)]));
+
+                        children.forEach((child, i) => node.insertBefore(child, node.children[i]));
+
+                        return list;
+
+                    });
+
+                    defineProp(list, 'splice', (start, deleteCount, ...items) => {
+
+                        for (let i = 0; i < deleteCount; i++) {
+
+                            remove(start);
+
+                        }
+
+                        items = items.map(model);
+
+                        items.forEach((item, i) => addBinding(item, start + i, true));
+
+                        return Array.prototype.splice.apply(list, [start, deleteCount].concat(items));
+
+                    });
+
+                    defineProp(list, 'unshift', (...args) => {
+
+                        args = args.map(model);
+
+                        args.forEach((item, i) => addBinding(item, i, true));
+
+                        Array.prototype.unshift.apply(list, args);
+
+                        return list;
+
+                    });
+
+                    list.forEach(addBinding);
 
                 }
             };
@@ -897,12 +966,6 @@
                 if (isVmEligible(value)) {
 
                     value = model(value);
-
-                    if (Array.isArray(value)) {
-
-                        bindArrayMethods(value, set);
-
-                    }
 
                 }
 

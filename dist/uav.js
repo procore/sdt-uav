@@ -43,14 +43,6 @@
     var attributes = [];
 
     /**
-     * ARRAY_METHODS is a list of array methods that alter arrays in place.
-     * These methods are wrapped to trigger bindings.
-     * 
-     * @type {Array}
-     */
-    var ARRAY_METHODS = ['push', 'pop', 'reverse', 'shift', 'sort', 'splice', 'unshift'];
-
-    /**
      * INVALID_EXPRESSION is used to flag template expressions
      * that throw exceptions.
      * 
@@ -96,43 +88,6 @@
             enumerable: false
         });
     };
-
-    /**
-     * bindArrayMethod wraps the given method of the given array
-     * so that it will trigger bindings.
-     * 
-     * @param  {String} method - the name of the method to wrap
-     * @param  {Array} vm - the array on which to operate
-     * @param  {Function} set - the vm's setter descriptor
-     * @return {undefined}
-     */
-    function bindArrayMethod(method, vm, set) {
-
-        defineProp(vm, method, function () {
-            for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-                args[_key] = arguments[_key];
-            }
-
-            Array.prototype[method].apply(vm, args);
-
-            set(Array.from(vm));
-        });
-    }
-
-    /**
-     * bindArrayMethods wraps a predefined list of array methods
-     * (ARRAY_METHODS) so that they will trigger bindings when called.
-     * 
-     * @param  {Array} vm - the array on which to operate
-     * @param  {Function} set - the vm's setter descriptor
-     * @return {undefined}
-     */
-    function bindArrayMethods(vm, set) {
-
-        ARRAY_METHODS.forEach(function (method) {
-            return bindArrayMethod(method, vm, set);
-        });
-    }
 
     /**
      * Selects an array of DOM nodes using a CSS selector.
@@ -384,8 +339,19 @@
     attributes.push(function (node, attribute, vm) {
 
         if (attribute.name === 'uav-loop') {
+            var remove = function remove(i) {
+
+                if (node.children[i]) {
+
+                    unbind(node.children[i]);
+
+                    node.children[i].remove();
+                }
+            };
 
             var loopNode = parse(node.innerHTML, node);
+
+            node.innerHTML = '';
 
             /**
              * Babel's slice to array shim is ~200 bytes, so we'll use
@@ -407,13 +373,11 @@
 
                     list = model(list);
 
-                    Array.from(node.children).forEach(unbind);
-
-                    node.innerHTML = '';
-
-                    list.forEach(function (item, i) {
+                    function addBinding(item, i, insert) {
 
                         function binding(doBind) {
+
+                            var childAtIndex = node.children[i];
 
                             var child = loopNode.cloneNode();
 
@@ -431,7 +395,7 @@
                             var loopMethods = {
                                 set: function set(_vm) {
 
-                                    _vm[as] = list[i];
+                                    _vm[as] = item;
 
                                     _vm[index] = i;
                                 },
@@ -443,9 +407,14 @@
                                 }
                             };
 
-                            if (node.children[i]) {
+                            if (insert && childAtIndex) {
 
-                                node.replaceChild(render(child, vm, loopMethods), node.children[i]);
+                                node.insertBefore(render(child, vm, loopMethods), childAtIndex);
+                            } else if (childAtIndex) {
+
+                                unbind(childAtIndex);
+
+                                node.replaceChild(render(child, vm, loopMethods), childAtIndex);
                             } else {
 
                                 node.appendChild(render(child, vm, loopMethods));
@@ -455,7 +424,111 @@
                         }
 
                         binding(true);
+                    }
+
+                    /**
+                     * Wrap native array methods that modify the
+                     * array in place, so that they will trigger
+                     * only the necessary bindings, without
+                     * re-rendering any existing elements.
+                     */
+                    defineProp(list, 'push', function () {
+                        for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+                            args[_key] = arguments[_key];
+                        }
+
+                        args = args.map(model);
+
+                        args.forEach(function (item, i) {
+                            return addBinding(item, list.length + i, true);
+                        });
+
+                        return Array.prototype.push.apply(list, args);
                     });
+
+                    defineProp(list, 'pop', function () {
+
+                        remove(list.length - 1);
+
+                        return Array.prototype.pop.apply(list);
+                    });
+
+                    defineProp(list, 'reverse', function () {
+
+                        Array.prototype.reverse.apply(list);
+
+                        var children = Array.from(node.children);
+
+                        for (var i = list.length - 1; i >= 0; i--) {
+
+                            node.appendChild(children[i]);
+                        }
+
+                        return list;
+                    });
+
+                    defineProp(list, 'shift', function () {
+
+                        remove(0);
+
+                        return Array.prototype.shift.apply(list);
+                    });
+
+                    defineProp(list, 'sort', function (sort) {
+
+                        var children = [];
+
+                        var temp = Array.from(list);
+
+                        Array.prototype.sort.call(list, sort);
+
+                        list.forEach(function (item) {
+                            return children.push(node.children[temp.indexOf(item)]);
+                        });
+
+                        children.forEach(function (child, i) {
+                            return node.insertBefore(child, node.children[i]);
+                        });
+
+                        return list;
+                    });
+
+                    defineProp(list, 'splice', function (start, deleteCount) {
+                        for (var _len2 = arguments.length, items = Array(_len2 > 2 ? _len2 - 2 : 0), _key2 = 2; _key2 < _len2; _key2++) {
+                            items[_key2 - 2] = arguments[_key2];
+                        }
+
+                        for (var i = 0; i < deleteCount; i++) {
+
+                            remove(start);
+                        }
+
+                        items = items.map(model);
+
+                        items.forEach(function (item, i) {
+                            return addBinding(item, start + i, true);
+                        });
+
+                        return Array.prototype.splice.apply(list, [start, deleteCount].concat(items));
+                    });
+
+                    defineProp(list, 'unshift', function () {
+                        for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+                            args[_key3] = arguments[_key3];
+                        }
+
+                        args = args.map(model);
+
+                        args.forEach(function (item, i) {
+                            return addBinding(item, i, true);
+                        });
+
+                        Array.prototype.unshift.apply(list, args);
+
+                        return list;
+                    });
+
+                    list.forEach(addBinding);
                 }
             };
         }
@@ -825,11 +898,6 @@
                 if (isVmEligible(value)) {
 
                     value = model(value);
-
-                    if (Array.isArray(value)) {
-
-                        bindArrayMethods(value, set);
-                    }
                 }
 
                 return value;

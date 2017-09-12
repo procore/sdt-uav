@@ -1,6 +1,7 @@
 - test two way binding on all input types
 - two way binding probably doesn't work in loops
 - consider batch updates / async rendering
+- array methods should only render diff
 
 - test.html should be removed
 - documentation
