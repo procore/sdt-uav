@@ -339,31 +339,28 @@
     attributes.push(function (node, attribute, vm) {
 
         if (attribute.name === 'uav-loop') {
-            var remove = function remove(i) {
 
-                if (node.children[i]) {
+            var loopVars = node.getAttribute('uav-as').split(',');
 
-                    unbind(node.children[i]);
+            node.removeAttribute('uav-as');
 
-                    node.children[i].remove();
+            var loopData = {
+                node: node,
+                as: loopVars[0],
+                index: loopVars[1],
+                html: node.innerHTML,
+                remove: function remove(i) {
+
+                    if (node.children[i]) {
+
+                        unbind(node.children[i]);
+
+                        node.children[i].remove();
+                    }
                 }
             };
 
-            var loopNode = parse(node.innerHTML, node);
-
             node.innerHTML = '';
-
-            /**
-             * Babel's slice to array shim is ~200 bytes, so we'll use
-             * old fashioned syntax here.
-             */
-            var loopVars = node.getAttribute('uav-as').split(',');
-
-            var as = loopVars[0];
-
-            var index = loopVars[1];
-
-            node.removeAttribute('uav-as');
 
             return {
                 loop: true,
@@ -373,65 +370,72 @@
 
                     list = model(list);
 
+                    if (!list._loops) {
+
+                        defineProp(list, '_loops', []);
+                    }
+
+                    if (list._loops.indexOf(loopData) === -1) {
+
+                        list._loops.push(loopData);
+                    }
+
                     function addBinding(item, i, insert) {
+
+                        var loops = insert ? list._loops : [loopData];
 
                         function binding(doBind) {
 
-                            var childAtIndex = node.children[i];
+                            loops.forEach(function (loop) {
 
-                            var child = loopNode.cloneNode();
+                                var childAtIndex = loop.node.children[i];
 
-                            child.innerHTML = loopNode.innerHTML;
+                                var child = parse(loop.html, loop.node);
 
-                            if (doBind) {
+                                if (doBind) {
 
-                                currentBinding = binding;
-                            }
-
-                            var origAs = vm[as];
-
-                            var origIndex = vm[index];
-
-                            var loopMethods = {
-                                set: function set(_vm) {
-
-                                    _vm[as] = item;
-
-                                    _vm[index] = i;
-                                },
-                                reset: function reset(_vm) {
-
-                                    _vm[as] = origAs;
-
-                                    _vm[index] = origIndex;
+                                    currentBinding = binding;
                                 }
-                            };
 
-                            if (insert && childAtIndex) {
+                                var origAs = vm[loop.as];
 
-                                node.insertBefore(render(child, vm, loopMethods), childAtIndex);
-                            } else if (childAtIndex) {
+                                var origIndex = vm[loop.index];
 
-                                unbind(childAtIndex);
+                                var loopMethods = {
+                                    set: function set(_vm) {
 
-                                node.replaceChild(render(child, vm, loopMethods), childAtIndex);
-                            } else {
+                                        _vm[loop.as] = item;
 
-                                node.appendChild(render(child, vm, loopMethods));
-                            }
+                                        _vm[loop.index] = i;
+                                    },
+                                    reset: function reset(_vm) {
 
-                            currentBinding = null;
+                                        _vm[loop.as] = origAs;
+
+                                        _vm[loop.index] = origIndex;
+                                    }
+                                };
+
+                                if (insert && childAtIndex) {
+
+                                    loop.node.insertBefore(render(child, vm, loopMethods), childAtIndex);
+                                } else if (childAtIndex) {
+
+                                    unbind(childAtIndex);
+
+                                    loop.node.replaceChild(render(child, vm, loopMethods), childAtIndex);
+                                } else {
+
+                                    loop.node.appendChild(render(child, vm, loopMethods));
+                                }
+
+                                currentBinding = null;
+                            });
                         }
 
                         binding(true);
                     }
 
-                    /**
-                     * Wrap native array methods that modify the
-                     * array in place, so that they will trigger
-                     * only the necessary bindings, without
-                     * re-rendering any existing elements.
-                     */
                     defineProp(list, 'push', function () {
                         for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
                             args[_key] = arguments[_key];
@@ -448,7 +452,9 @@
 
                     defineProp(list, 'pop', function () {
 
-                        remove(list.length - 1);
+                        list._loops.forEach(function (loop) {
+                            return loop.remove(list.length - 1);
+                        });
 
                         return Array.prototype.pop.apply(list);
                     });
@@ -457,37 +463,45 @@
 
                         Array.prototype.reverse.apply(list);
 
-                        var children = Array.from(node.children);
+                        list._loops.forEach(function (loop) {
 
-                        for (var i = list.length - 1; i >= 0; i--) {
+                            var children = Array.from(loop.node.children);
 
-                            node.appendChild(children[i]);
-                        }
+                            for (var i = list.length - 1; i >= 0; i--) {
+
+                                loop.node.appendChild(children[i]);
+                            }
+                        });
 
                         return list;
                     });
 
                     defineProp(list, 'shift', function () {
 
-                        remove(0);
+                        list._loops.forEach(function (loop) {
+                            return loop.remove(0);
+                        });
 
                         return Array.prototype.shift.apply(list);
                     });
 
                     defineProp(list, 'sort', function (sort) {
 
-                        var children = [];
-
                         var temp = Array.from(list);
 
                         Array.prototype.sort.call(list, sort);
 
-                        list.forEach(function (item) {
-                            return children.push(node.children[temp.indexOf(item)]);
-                        });
+                        list._loops.forEach(function (loop) {
 
-                        children.forEach(function (child, i) {
-                            return node.insertBefore(child, node.children[i]);
+                            var children = [];
+
+                            list.forEach(function (item) {
+                                return children.push(loop.node.children[temp.indexOf(item)]);
+                            });
+
+                            children.forEach(function (child, i) {
+                                return loop.node.insertBefore(child, loop.node.children[i]);
+                            });
                         });
 
                         return list;
@@ -498,12 +512,15 @@
                             items[_key2 - 2] = arguments[_key2];
                         }
 
-                        for (var i = 0; i < deleteCount; i++) {
-
-                            remove(start);
-                        }
-
                         items = items.map(model);
+
+                        list._loops.forEach(function (loop) {
+
+                            for (var i = 0; i < deleteCount; i++) {
+
+                                loop.remove(start);
+                            }
+                        });
 
                         items.forEach(function (item, i) {
                             return addBinding(item, start + i, true);
@@ -528,7 +545,9 @@
                         return list;
                     });
 
-                    list.forEach(addBinding);
+                    list.forEach(function (item, i) {
+                        return addBinding(item, i);
+                    });
                 }
             };
         }
@@ -899,6 +918,12 @@
 
                     value = model(value);
                 }
+
+                // if (Array.isArray(value)) {
+
+                //     bindArrayMethods(value);
+
+                // }
 
                 return value;
             }

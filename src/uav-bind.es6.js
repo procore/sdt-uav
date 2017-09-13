@@ -48,15 +48,7 @@
 
         return value => {
 
-            if (value === node.value) {
-
-                node.setAttribute('checked', '');
-
-            } else {
-
-                node.removeAttribute('checked');
-
-            }
+            node.checked = value.toString() === node.value;
 
         };
 
@@ -74,46 +66,28 @@
     function bindCheckbox(node, tmpl, vm) {
 
         node.addEventListener('change', () => {
-
-            uav.evaluate(tmpl, vm);
-
-            const list = uav.lastAccessed.vm[uav.lastAccessed.key];
-
-            uav.lastAccessed = null;
+            
+            const list = uav.evaluate(tmpl, vm);
 
             const index = list.indexOf(node.value);
 
-            const notInList = index === -1;
-
-            if (node.checked && notInList) {
+            if (index === -1 && node.checked) {
 
                 list.push(node.value);
 
-            } else if (!node.checked && !notInList) {
+            } else if (index !== -1 && !node.checked) {
 
                 list.splice(index, 1);
 
             }
 
+            uav.lastAccessed = null;
+
         });
 
         return list => {
 
-            const inputs = node.parentNode.querySelectorAll(`input[name="${node.getAttribute('name')}"]`);
-
-            Array.from(inputs).forEach(input => {
-
-                if (list.indexOf(input.value) === -1) {
-
-                    input.removeAttribute('checked');
-
-                } else {
-
-                    input.setAttribute('checked', '');
-
-                }
-
-            });
+            node.checked = list.map(String).indexOf(node.value) !== -1;
 
         };
 

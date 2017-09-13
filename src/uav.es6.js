@@ -355,33 +355,29 @@
 
         if (attribute.name === 'uav-loop') {
 
-            const loopNode = parse(node.innerHTML, node);
-
-            node.innerHTML = '';
-
-            /**
-             * Babel's slice to array shim is ~200 bytes, so we'll use
-             * old fashioned syntax here.
-             */
             const loopVars = node.getAttribute('uav-as').split(',');
-
-            const as = loopVars[0];
-
-            const index = loopVars[1];
 
             node.removeAttribute('uav-as');
 
-            function remove(i) {
+            const loopData = {
+                node,
+                as: loopVars[0],
+                index: loopVars[1],
+                html: node.innerHTML,
+                remove: i => {
 
-                if (node.children[i]) {
+                    if (node.children[i]) {
 
-                    unbind(node.children[i]);
+                        unbind(node.children[i]);
 
-                    node.children[i].remove();
+                        node.children[i].remove();
+
+                    }
 
                 }
+            };
 
-            }
+            node.innerHTML = '';
 
             return {
                 loop: true,
@@ -391,63 +387,79 @@
 
                     list = model(list);
 
+                    if (!list._loops) {
+
+                        defineProp(list, '_loops', []);
+
+                    }
+
+                    if (list._loops.indexOf(loopData) === -1) {
+
+                        list._loops.push(loopData);
+
+                    }
+
                     function addBinding(item, i, insert) {
+
+                        const loops = insert ? list._loops : [loopData];
 
                         function binding(doBind) {
 
-                            const childAtIndex = node.children[i];
+                            loops.forEach(loop => {
 
-                            const child = loopNode.cloneNode();
+                                const childAtIndex = loop.node.children[i];
 
-                            child.innerHTML = loopNode.innerHTML;
+                                const child = parse(loop.html, loop.node);
 
-                            if (doBind) {
+                                if (doBind) {
 
-                                currentBinding = binding;
-
-                            }
-
-                            const origAs = vm[as];
-
-                            const origIndex = vm[index];
-
-                            const loopMethods = {
-
-                                set(_vm) {
-
-                                    _vm[as] = item;
-                                    
-                                    _vm[index] = i;
-
-                                },
-
-                                reset(_vm) {
-
-                                    _vm[as] = origAs;
-
-                                    _vm[index] = origIndex;
+                                    currentBinding = binding;
 
                                 }
 
-                            };
+                                const origAs = vm[loop.as];
 
-                            if (insert && childAtIndex) {
+                                const origIndex = vm[loop.index];
 
-                                node.insertBefore(render(child, vm, loopMethods), childAtIndex);
+                                const loopMethods = {
 
-                            } else if (childAtIndex) {
+                                    set(_vm) {
 
-                                unbind(childAtIndex);
+                                        _vm[loop.as] = item;
+                                        
+                                        _vm[loop.index] = i;
 
-                                node.replaceChild(render(child, vm, loopMethods), childAtIndex);
+                                    },
 
-                            } else {
+                                    reset(_vm) {
 
-                                node.appendChild(render(child, vm, loopMethods));
+                                        _vm[loop.as] = origAs;
 
-                            }
+                                        _vm[loop.index] = origIndex;
 
-                            currentBinding = null;
+                                    }
+
+                                };
+
+                                if (insert && childAtIndex) {
+
+                                    loop.node.insertBefore(render(child, vm, loopMethods), childAtIndex);
+
+                                } else if (childAtIndex) {
+
+                                    unbind(childAtIndex);
+
+                                    loop.node.replaceChild(render(child, vm, loopMethods), childAtIndex);
+
+                                } else {
+
+                                    loop.node.appendChild(render(child, vm, loopMethods));
+
+                                }
+
+                                currentBinding = null;
+
+                            });
 
                         }
 
@@ -455,12 +467,6 @@
 
                     }
 
-                    /**
-                     * Wrap native array methods that modify the
-                     * array in place, so that they will trigger
-                     * only the necessary bindings, without
-                     * re-rendering any existing elements.
-                     */
                     defineProp(list, 'push', (...args) => {
 
                         args = args.map(model);
@@ -473,7 +479,7 @@
 
                     defineProp(list, 'pop', () => {
 
-                        remove(list.length - 1);
+                        list._loops.forEach(loop => loop.remove(list.length - 1));
 
                         return Array.prototype.pop.apply(list);
 
@@ -483,13 +489,17 @@
 
                         Array.prototype.reverse.apply(list);
 
-                        const children = Array.from(node.children);
+                        list._loops.forEach(loop => {
 
-                        for (let i = list.length - 1; i >= 0; i--) {
+                            const children = Array.from(loop.node.children);
 
-                            node.appendChild(children[i]);
+                            for (let i = list.length - 1; i >= 0; i--) {
 
-                        }
+                                loop.node.appendChild(children[i]);
+
+                            }
+
+                        });
 
                         return list;
 
@@ -497,7 +507,7 @@
 
                     defineProp(list, 'shift', () => {
 
-                        remove(0);
+                        list._loops.forEach(loop => loop.remove(0));
 
                         return Array.prototype.shift.apply(list);
 
@@ -505,15 +515,19 @@
 
                     defineProp(list, 'sort', sort => {
 
-                        const children = [];
-
                         const temp = Array.from(list);
 
                         Array.prototype.sort.call(list, sort);
-                        
-                        list.forEach(item => children.push(node.children[temp.indexOf(item)]));
 
-                        children.forEach((child, i) => node.insertBefore(child, node.children[i]));
+                        list._loops.forEach(loop => {
+
+                            const children = [];
+                            
+                            list.forEach(item => children.push(loop.node.children[temp.indexOf(item)]));
+
+                            children.forEach((child, i) => loop.node.insertBefore(child, loop.node.children[i]));
+
+                        });
 
                         return list;
 
@@ -521,13 +535,17 @@
 
                     defineProp(list, 'splice', (start, deleteCount, ...items) => {
 
-                        for (let i = 0; i < deleteCount; i++) {
-
-                            remove(start);
-
-                        }
-
                         items = items.map(model);
+
+                        list._loops.forEach(loop => {
+
+                            for (let i = 0; i < deleteCount; i++) {
+
+                                loop.remove(start);
+
+                            }
+
+                        });
 
                         items.forEach((item, i) => addBinding(item, start + i, true));
 
@@ -547,7 +565,7 @@
 
                     });
 
-                    list.forEach(addBinding);
+                    list.forEach((item, i) => addBinding(item, i));
 
                 }
             };
@@ -968,6 +986,12 @@
                     value = model(value);
 
                 }
+
+                // if (Array.isArray(value)) {
+
+                //     bindArrayMethods(value);
+
+                // }
 
                 return value;
 
