@@ -85,6 +85,186 @@
     });
 
     /**
+     * bindArrayMethods wraps array methods so that they 
+     * will trigger bindings when called.
+     * 
+     * @param  {Array} list - the array on which to operate
+     * @param  {Function} set - the vm's setter descriptor
+     * @return {undefined}
+     */
+    function bindArrayMethods(list, set) {
+        
+        defineProp(list, 'push', (...args) => {
+
+            args = args.map(model);
+
+            Array.prototype.push.apply(list, args);
+
+            if (list._loops) {
+
+                list._loops.forEach(loop => {
+
+                    for (let i = list.length - args.length; i < list.length; i++) {
+
+                        loop.bind(list, list[i], i, true);
+
+                    }
+
+                });
+
+            }
+
+            set(list, true);
+
+            return list;
+
+        });
+
+        defineProp(list, 'pop', () => {
+
+            if (list._loops) {
+
+                list._loops.forEach(loop => loop.remove(list.length - 1));
+
+            }
+
+            const result = Array.prototype.pop.call(list);
+
+            set(list, true);
+
+            return result;
+
+        });
+
+        defineProp(list, 'reverse', () => {
+
+            if (list._loops) {
+
+                list._loops.forEach(loop => {
+
+                    const children = Array.from(loop.node.children);
+
+                    for (let i = list.length - 1; i >= 0; i--) {
+
+                        loop.node.appendChild(children[i]);
+
+                    }
+
+                });
+
+            }
+
+            Array.prototype.reverse.call(list);
+
+            set(list, true);
+
+            return list;
+
+        });
+
+        defineProp(list, 'shift', () => {
+
+            if (list._loops) {
+
+                list._loops.forEach(loop => loop.remove(0));
+
+            }
+
+            const result = Array.prototype.shift.call(list);
+
+            set(list, true);
+
+            return result;
+
+        });
+
+        defineProp(list, 'sort', sort => {
+
+            const temp = Array.from(list);
+
+            Array.prototype.sort.call(list, sort);
+
+            if (list._loops) {
+
+                list._loops.forEach(loop => {
+
+                    const nodes = [];
+
+                    list.forEach(value => nodes.push(loop.node.children[temp.indexOf(value)]));
+
+                    nodes.forEach((child, j) => loop.node.insertBefore(child, loop.node.children[j]));
+
+                });
+
+            }
+
+            set(list, true);
+
+            return list;
+
+        });
+
+        defineProp(list, 'splice', (...args) => {
+
+            args = args.map(model);
+
+            const start = args.shift();
+
+            const deleteCount = args.shift();
+
+            const result = Array.prototype.splice.apply(list, [start, deleteCount].concat(args));
+
+            for (let j = 0; j < deleteCount; j++) {
+
+                if (list._loops) {
+
+                    list._loops.forEach(loop => loop.remove(start));
+
+                }
+
+            }
+
+            if (list._loops) {
+
+                list._loops.forEach(loop => {
+
+                    args.forEach((arg, j) => loop.bind(list, arg, start + j, true));
+
+                });
+
+            }
+
+            set(list, true);
+
+            return result;
+
+        });
+
+        defineProp(list, 'unshift', (...args) => {
+
+            args = args.map(model);
+
+            if (list._loops) {
+
+                list._loops.forEach(loop => {
+
+                    args.forEach((arg, i) => loop.bind(list, arg, i, true));
+
+                });
+
+            }
+
+            Array.prototype.unshift.apply(list, args);
+
+            set(list, true);
+
+            return list;
+
+        });
+
+    }
+
+    /**
      * Selects an array of DOM nodes using a CSS selector.
      * - act on all matched elements:       uav.all('.items', el => el.classList.add('active'));
      * - act on the nth matched element:    uav.all('.items')[2].classList.add('active'));
@@ -252,7 +432,7 @@
 
         if (expressions) {
 
-            function binding(doBind) {
+            function binding(doBind, preventLoopRender) {
 
                 expressions.forEach(expression => {
 
@@ -290,7 +470,7 @@
 
                     }
 
-                    opts.replace(value, expression);
+                    opts.replace(value, expression, preventLoopRender);
 
                 });
 
@@ -359,7 +539,7 @@
 
             node.removeAttribute('uav-as');
 
-            const loopData = {
+            const loop = {
                 node,
                 as: loopVars[0],
                 index: loopVars[1],
@@ -374,16 +554,84 @@
 
                     }
 
-                }
-            };
+                },
+                bind: (list, item, i, insert) => {
 
-            node.innerHTML = '';
+                    function binding(doBind) {
+
+                        const childAtIndex = loop.node.children[i];
+
+                        const child = parse(loop.html, loop.node);
+
+                        if (doBind) {
+
+                            currentBinding = binding;
+
+                        }
+
+                        const origAs = vm[loop.as];
+
+                        const origIndex = vm[loop.index];
+
+                        const loopMethods = {
+
+                            set(_vm) {
+
+                                _vm[loop.as] = item;
+                                
+                                _vm[loop.index] = i;
+
+                            },
+
+                            reset(_vm) {
+
+                                _vm[loop.as] = origAs;
+
+                                _vm[loop.index] = origIndex;
+
+                            }
+
+                        };
+
+                        if (insert && childAtIndex) {
+
+                            loop.node.insertBefore(render(child, vm, loopMethods), childAtIndex);
+
+                        } else if (childAtIndex) {
+
+                            unbind(childAtIndex);
+
+                            loop.node.replaceChild(render(child, vm, loopMethods), childAtIndex);
+
+                        } else {
+
+                            loop.node.appendChild(render(child, vm, loopMethods));
+
+                        }
+
+                        currentBinding = null;
+
+                    }
+
+                    binding(true);
+
+                }
+
+            };
 
             return {
                 loop: true,
                 tmpl: attribute.value,
                 one: true,
-                replace: list => {
+                replace: (list, expression, preventLoopRender) => {
+
+                    if (preventLoopRender) {
+
+                        return;
+
+                    }
+
+                    node.innerHTML = '';
 
                     list = model(list);
 
@@ -393,179 +641,13 @@
 
                     }
 
-                    if (list._loops.indexOf(loopData) === -1) {
+                    if (list._loops.indexOf(loop) === -1) {
 
-                        list._loops.push(loopData);
-
-                    }
-
-                    function addBinding(item, i, insert) {
-
-                        const loops = insert ? list._loops : [loopData];
-
-                        function binding(doBind) {
-
-                            loops.forEach(loop => {
-
-                                const childAtIndex = loop.node.children[i];
-
-                                const child = parse(loop.html, loop.node);
-
-                                if (doBind) {
-
-                                    currentBinding = binding;
-
-                                }
-
-                                const origAs = vm[loop.as];
-
-                                const origIndex = vm[loop.index];
-
-                                const loopMethods = {
-
-                                    set(_vm) {
-
-                                        _vm[loop.as] = item;
-                                        
-                                        _vm[loop.index] = i;
-
-                                    },
-
-                                    reset(_vm) {
-
-                                        _vm[loop.as] = origAs;
-
-                                        _vm[loop.index] = origIndex;
-
-                                    }
-
-                                };
-
-                                if (insert && childAtIndex) {
-
-                                    loop.node.insertBefore(render(child, vm, loopMethods), childAtIndex);
-
-                                } else if (childAtIndex) {
-
-                                    unbind(childAtIndex);
-
-                                    loop.node.replaceChild(render(child, vm, loopMethods), childAtIndex);
-
-                                } else {
-
-                                    loop.node.appendChild(render(child, vm, loopMethods));
-
-                                }
-
-                                currentBinding = null;
-
-                            });
-
-                        }
-
-                        binding(true);
+                        list._loops.push(loop);
 
                     }
 
-                    defineProp(list, 'push', (...args) => {
-
-                        args = args.map(model);
-
-                        args.forEach((item, i) => addBinding(item, list.length + i, true));
-
-                        return Array.prototype.push.apply(list, args);
-
-                    });
-
-                    defineProp(list, 'pop', () => {
-
-                        list._loops.forEach(loop => loop.remove(list.length - 1));
-
-                        return Array.prototype.pop.apply(list);
-
-                    });
-
-                    defineProp(list, 'reverse', () => {
-
-                        Array.prototype.reverse.apply(list);
-
-                        list._loops.forEach(loop => {
-
-                            const children = Array.from(loop.node.children);
-
-                            for (let i = list.length - 1; i >= 0; i--) {
-
-                                loop.node.appendChild(children[i]);
-
-                            }
-
-                        });
-
-                        return list;
-
-                    });
-
-                    defineProp(list, 'shift', () => {
-
-                        list._loops.forEach(loop => loop.remove(0));
-
-                        return Array.prototype.shift.apply(list);
-
-                    });
-
-                    defineProp(list, 'sort', sort => {
-
-                        const temp = Array.from(list);
-
-                        Array.prototype.sort.call(list, sort);
-
-                        list._loops.forEach(loop => {
-
-                            const children = [];
-                            
-                            list.forEach(item => children.push(loop.node.children[temp.indexOf(item)]));
-
-                            children.forEach((child, i) => loop.node.insertBefore(child, loop.node.children[i]));
-
-                        });
-
-                        return list;
-
-                    });
-
-                    defineProp(list, 'splice', (start, deleteCount, ...items) => {
-
-                        items = items.map(model);
-
-                        list._loops.forEach(loop => {
-
-                            for (let i = 0; i < deleteCount; i++) {
-
-                                loop.remove(start);
-
-                            }
-
-                        });
-
-                        items.forEach((item, i) => addBinding(item, start + i, true));
-
-                        return Array.prototype.splice.apply(list, [start, deleteCount].concat(items));
-
-                    });
-
-                    defineProp(list, 'unshift', (...args) => {
-
-                        args = args.map(model);
-
-                        args.forEach((item, i) => addBinding(item, i, true));
-
-                        Array.prototype.unshift.apply(list, args);
-
-                        return list;
-
-                    });
-
-                    list.forEach((item, i) => addBinding(item, i));
+                    list.forEach((item, i) => loop.bind(list, item, i));
 
                 }
             };
@@ -987,11 +1069,11 @@
 
                 }
 
-                // if (Array.isArray(value)) {
+                if (Array.isArray(value)) {
 
-                //     bindArrayMethods(value);
+                    bindArrayMethods(value, set);
 
-                // }
+                }
 
                 return value;
 
@@ -1043,7 +1125,7 @@
             /**
              * Handle changes to a property on the model.
              */
-            function set(value) {
+            function set(value, preventLoopRender) {
 
                 if (data[key] !== value || _typeof(value, 'object')) {
 
@@ -1076,7 +1158,7 @@
                      */
                     if (vm._uav[key]) {
 
-                        vm._uav[key].forEach(fn => fn());
+                        vm._uav[key].forEach(fn => fn(false, preventLoopRender));
 
                     }
 
