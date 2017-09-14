@@ -3,7 +3,7 @@
     /*
      * Array.prototype.from shim for IE
      *
-     * Using destructuring would be preferable syntactically, but the Babel 
+     * Spread operators would be preferable syntactically, but the Babel 
      * shim for that is nearly 100 bytes gzipped.
      */
     if (!Array.from) {
@@ -11,6 +11,7 @@
         Array.from = function(object) {
 
             return [].slice.call(object);
+
         };
 
     }
@@ -32,7 +33,7 @@
     /**
      * attributes is a list of functions for parsing element attributes.
      * It can be extended with uav.attributes.push(<Function>) to support
-     * new attribute binding types (this is how uav-bind.js works).
+     * new attribute binding types (this is how uav-bind works).
      *
      * Attribute parsers are passed the following parameters:
      * - node: the element on which the attribute appears
@@ -86,10 +87,15 @@
 
     /**
      * bindArrayMethods wraps array methods so that they 
-     * will trigger bindings when called.
+     * will do three things when called:
+     * 1) Call the native method on the array
+     * 2) Update any loops associated with the array, 
+     *    by rearranging, removing, and/or inserting nodes
+     *    as required by the particular method.
+     * 3) Trigger any non-loop bindings to the array.
      * 
      * @param  {Array} list - the array on which to operate
-     * @param  {Function} set - the vm's setter descriptor
+     * @param  {Function} set - the list's setter descriptor
      * @return {undefined}
      */
     function bindArrayMethods(list, set) {
@@ -100,19 +106,15 @@
 
             Array.prototype.push.apply(list, args);
 
-            if (list._loops) {
+            list._loops.forEach(loop => {
 
-                list._loops.forEach(loop => {
+                for (let i = list.length - args.length; i < list.length; i++) {
 
-                    for (let i = list.length - args.length; i < list.length; i++) {
+                    loop.bind(list, list[i], i, true);
 
-                        loop.bind(list, list[i], i, true);
+                }
 
-                    }
-
-                });
-
-            }
+            });
 
             set(list, true);
 
@@ -122,11 +124,7 @@
 
         defineProp(list, 'pop', () => {
 
-            if (list._loops) {
-
-                list._loops.forEach(loop => loop.remove(list.length - 1));
-
-            }
+            list._loops.forEach(loop => loop.remove(list.length - 1));
 
             const result = Array.prototype.pop.call(list);
 
@@ -138,21 +136,17 @@
 
         defineProp(list, 'reverse', () => {
 
-            if (list._loops) {
+            list._loops.forEach(loop => {
 
-                list._loops.forEach(loop => {
+                const children = Array.from(loop.node.children);
 
-                    const children = Array.from(loop.node.children);
+                for (let i = list.length - 1; i >= 0; i--) {
 
-                    for (let i = list.length - 1; i >= 0; i--) {
+                    loop.node.appendChild(children[i]);
 
-                        loop.node.appendChild(children[i]);
+                }
 
-                    }
-
-                });
-
-            }
+            });
 
             Array.prototype.reverse.call(list);
 
@@ -164,11 +158,7 @@
 
         defineProp(list, 'shift', () => {
 
-            if (list._loops) {
-
-                list._loops.forEach(loop => loop.remove(0));
-
-            }
+            list._loops.forEach(loop => loop.remove(0));
 
             const result = Array.prototype.shift.call(list);
 
@@ -184,19 +174,15 @@
 
             Array.prototype.sort.call(list, sort);
 
-            if (list._loops) {
+            list._loops.forEach(loop => {
 
-                list._loops.forEach(loop => {
+                const nodes = [];
 
-                    const nodes = [];
+                list.forEach(value => nodes.push(loop.node.children[temp.indexOf(value)]));
 
-                    list.forEach(value => nodes.push(loop.node.children[temp.indexOf(value)]));
+                nodes.forEach((child, j) => loop.node.insertBefore(child, loop.node.children[j]));
 
-                    nodes.forEach((child, j) => loop.node.insertBefore(child, loop.node.children[j]));
-
-                });
-
-            }
+            });
 
             set(list, true);
 
@@ -214,17 +200,13 @@
 
             const result = Array.prototype.splice.apply(list, [start, deleteCount].concat(args));
 
-            for (let j = 0; j < deleteCount; j++) {
+            if (list._loops) {
 
-                if (list._loops) {
+                for (let j = 0; j < deleteCount; j++) {
 
                     list._loops.forEach(loop => loop.remove(start));
 
                 }
-
-            }
-
-            if (list._loops) {
 
                 list._loops.forEach(loop => {
 
@@ -244,15 +226,11 @@
 
             args = args.map(model);
 
-            if (list._loops) {
+            list._loops.forEach(loop => {
 
-                list._loops.forEach(loop => {
+                args.forEach((arg, i) => loop.bind(list, arg, i, true));
 
-                    args.forEach((arg, i) => loop.bind(list, arg, i, true));
-
-                });
-
-            }
+            });
 
             Array.prototype.unshift.apply(list, args);
 
@@ -410,20 +388,19 @@
     const stripTags = str => str.replace(uav.tagRX, '');
 
     /**
-     * Checks to see if a template contains expressions. If so, binds them
-     * to a view model so that any changes to the relevant properties will
-     * trigger the binding.
+     * Checks to see if a template contains expressions. If so, binds the
+     * relevant properties of the view model to the DOM node being parsed.
      * 
      * @param  {Object} opts - binding options, as follows:
      *          {
-     *              tmpl   : {string} the template string to check
-     *              one : {boolean} this template is guaranteed to have one expression
-     *              replace: {function} handles in-progress template evaluations
-     *              commit : {function} handles completed template evaluations
+     *              tmpl    : {string} the template string to check
+     *              one     : {boolean} this template is guaranteed to have one expression
+     *              replace : {function} handles incremental evaluations of templates with multiple expressions
+     *              commit  : {function} handles completed template evaluations
      *          }
      *
      * @param  {Object} vm - the view model for the expression
-     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
+     * @param  {Object} loopMethods - set and reset methods for rendering loops. Optional.
      * @return {undefined}
      */
     function bind(opts, vm, loopMethods) {
@@ -432,6 +409,15 @@
 
         if (expressions) {
 
+            /**
+             * binding is the function that runs when a bound model property is changed.
+             * 
+             * @param  {Boolean} doBind - whether a new binding should be created (only the first run)
+             * @param  {Boolean} preventLoopRender - a flag passed from bindArrayMethods, indicating
+             *                                       that any rendering required by this change has
+             *                                       been completed by the array method override.
+             * @return {undefined}
+             */
             function binding(doBind, preventLoopRender) {
 
                 expressions.forEach(expression => {
@@ -452,13 +438,13 @@
 
                     let value = evaluate(code, vm);
 
+                    currentBinding = null;
+
                     if (loopMethods) {
 
                         loopMethods.reset(vm);
 
                     }
-
-                    currentBinding = null;
 
                     if (_typeof(value, 'boolean')) {
 
@@ -557,17 +543,11 @@
                 },
                 bind: (list, item, i, insert) => {
 
-                    function binding(doBind) {
-
+                    function binding() {
+                        console.log('creating binding', loop.as);
                         const childAtIndex = loop.node.children[i];
 
                         const child = parse(loop.html, loop.node);
-
-                        if (doBind) {
-
-                            currentBinding = binding;
-
-                        }
 
                         const origAs = vm[loop.as];
 
@@ -593,27 +573,38 @@
 
                         };
 
+                        /**
+                         * Insert and bind a new node at the current index
+                         */
                         if (insert && childAtIndex) {
 
                             loop.node.insertBefore(render(child, vm, loopMethods), childAtIndex);
 
+                        /**
+                         * Unbind and replace the node at the current index
+                         */
                         } else if (childAtIndex) {
 
                             unbind(childAtIndex);
 
                             loop.node.replaceChild(render(child, vm, loopMethods), childAtIndex);
 
+                        /**
+                         * Append and bind a new node
+                         */
                         } else {
 
                             loop.node.appendChild(render(child, vm, loopMethods));
 
                         }
 
-                        currentBinding = null;
-
                     }
 
-                    binding(true);
+                    currentBinding = binding;
+
+                    binding();
+
+                    currentBinding = null;
 
                 }
 
@@ -634,12 +625,6 @@
                     node.innerHTML = '';
 
                     list = model(list);
-
-                    if (!list._loops) {
-
-                        defineProp(list, '_loops', []);
-
-                    }
 
                     if (list._loops.indexOf(loop) === -1) {
 
@@ -822,7 +807,7 @@
      * @param  {Element} node - the owner of the attribute 
      * @param  {Object} attribute - an object with name and value properties
      * @param  {Object} vm - the current view model
-     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
+     * @param  {Object} loopMethods - set and reset methods for rendering loops. Optional.
      * @return {Boolean} isLoop - indicates whether the node contains a template loop
      */
     function bindAttribute(node, attribute, vm, loopMethods) {
@@ -860,7 +845,7 @@
      * 
      * @param  {Element} node - the text node to parse
      * @param  {Object} vm - the current view model
-     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
+     * @param  {Object} loopMethods - set and reset methods for rendering loops. Optional.
      * @return {undefined}
      */
     function bindTextNode(node, vm, loopMethods) {
@@ -912,7 +897,7 @@
      * 
      * @param  {Element} node - the starting text node
      * @param  {Object} vm - the current view model
-     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
+     * @param  {Object} loopMethods - set and reset methods for rendering loops. Optional.
      * @return {undefined}
      */
     function explodeTextNode(node, vm, loopMethods) {
@@ -949,7 +934,7 @@
      * 
      * @param  {Element} node - the node to parse
      * @param  {Object} vm - the current view model
-     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
+     * @param  {Object} loopMethods - set and reset methods for rendering loops. Optional.
      * @return {Element}
      */
     function render(node, vm, loopMethods) {
@@ -958,6 +943,10 @@
 
         currentNode = node;
 
+        /**
+         * node._uav is where we'll store garbage collection functions
+         * to run if the node is removed or replaced later.
+         */
         defineProp(currentNode, '_uav', []);
 
         forEachAttribute(node, attribute => {
@@ -1047,7 +1036,19 @@
 
         }
 
-        const vm = Array.isArray(data) ? [] : {};
+        let vm = {};
+
+        if (Array.isArray(data)) {
+
+            vm = [];
+
+            /**
+             * Array._loops is where we'll store information
+             * about the template loops bound to this array.
+             */
+            defineProp(vm, '_loops', []);
+
+        }
 
         /**
          * The hidden _uav property contains all
@@ -1085,11 +1086,14 @@
              */
             function get() {
 
+                /**
+                 * If there is currently a binding being created at the
+                 * time that this model property is accessed, it means
+                 * that this property is referenced within the template
+                 * expression, and therefore should be bound.
+                 */
                 if (currentBinding) {
 
-                    /**
-                     * Associate the binding with this property.
-                     */
                     let binding = currentBinding;
 
                     vm._uav[key] = vm._uav[key] || [];
@@ -1124,6 +1128,11 @@
 
             /**
              * Handle changes to a property on the model.
+             *
+             * @param {any} value - the property's new value
+             * @param {Boolean} preventLoopRender - a flag passed by bindArrayMethods,
+             *                                      indicating that any DOM updates
+             *                                      are already complete.
              */
             function set(value, preventLoopRender) {
 
@@ -1185,10 +1194,11 @@
      * Creates a component for the given model and template.
      * Renders the component into the specified element, if any.
      * 
-     * @param  {Object} vm - the data for the component's view model (optional)
-     * @param  {String} tmpl - the component's HTML template
-     * @param  {String} selector - the CSS selector for the node in 
+     * @param {Object} vm - the data for the component's view model (optional)
+     * @param {String} tmpl - the component's HTML template
+     * @param {String} selector - the CSS selector for the node in 
      *          which to render the component (optional)
+     * @param {Function} callback - runs after the render, passed the root node (optional)
      * @return {Object} vm
      */
     function component(vm, tmpl, selector) {

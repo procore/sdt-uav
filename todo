@@ -1,9 +1,13 @@
+- test multidimensional arrays
 - test two way binding on all input types
 - two way binding probably doesn't work in loops
-- consider batch updates / async rendering
-- array methods should only render diff
+- browser testing
 
 - test.html should be removed
 - documentation
 - comments
 - setting a deep object property can cause extra bindings to run
+- benchmark
+- consider batch updates / async rendering
+- uav-router
+- uav-server

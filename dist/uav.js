@@ -3,7 +3,7 @@
     /*
      * Array.prototype.from shim for IE
      *
-     * Using destructuring would be preferable syntactically, but the Babel 
+     * Spread operators would be preferable syntactically, but the Babel 
      * shim for that is nearly 100 bytes gzipped.
      */
     if (!Array.from) {
@@ -31,7 +31,7 @@
     /**
      * attributes is a list of functions for parsing element attributes.
      * It can be extended with uav.attributes.push(<Function>) to support
-     * new attribute binding types (this is how uav-bind.js works).
+     * new attribute binding types (this is how uav-bind works).
      *
      * Attribute parsers are passed the following parameters:
      * - node: the element on which the attribute appears
@@ -88,6 +88,169 @@
             enumerable: false
         });
     };
+
+    /**
+     * bindArrayMethods wraps array methods so that they 
+     * will do three things when called:
+     * 1) Call the native method on the array
+     * 2) Update any loops associated with the array, 
+     *    by rearranging, removing, and/or inserting nodes
+     *    as required by the particular method.
+     * 3) Trigger any non-loop bindings to the array.
+     * 
+     * @param  {Array} list - the array on which to operate
+     * @param  {Function} set - the list's setter descriptor
+     * @return {undefined}
+     */
+    function bindArrayMethods(list, set) {
+
+        defineProp(list, 'push', function () {
+            for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+                args[_key] = arguments[_key];
+            }
+
+            args = args.map(model);
+
+            Array.prototype.push.apply(list, args);
+
+            list._loops.forEach(function (loop) {
+
+                for (var i = list.length - args.length; i < list.length; i++) {
+
+                    loop.bind(list, list[i], i, true);
+                }
+            });
+
+            set(list, true);
+
+            return list;
+        });
+
+        defineProp(list, 'pop', function () {
+
+            list._loops.forEach(function (loop) {
+                return loop.remove(list.length - 1);
+            });
+
+            var result = Array.prototype.pop.call(list);
+
+            set(list, true);
+
+            return result;
+        });
+
+        defineProp(list, 'reverse', function () {
+
+            list._loops.forEach(function (loop) {
+
+                var children = Array.from(loop.node.children);
+
+                for (var i = list.length - 1; i >= 0; i--) {
+
+                    loop.node.appendChild(children[i]);
+                }
+            });
+
+            Array.prototype.reverse.call(list);
+
+            set(list, true);
+
+            return list;
+        });
+
+        defineProp(list, 'shift', function () {
+
+            list._loops.forEach(function (loop) {
+                return loop.remove(0);
+            });
+
+            var result = Array.prototype.shift.call(list);
+
+            set(list, true);
+
+            return result;
+        });
+
+        defineProp(list, 'sort', function (sort) {
+
+            var temp = Array.from(list);
+
+            Array.prototype.sort.call(list, sort);
+
+            list._loops.forEach(function (loop) {
+
+                var nodes = [];
+
+                list.forEach(function (value) {
+                    return nodes.push(loop.node.children[temp.indexOf(value)]);
+                });
+
+                nodes.forEach(function (child, j) {
+                    return loop.node.insertBefore(child, loop.node.children[j]);
+                });
+            });
+
+            set(list, true);
+
+            return list;
+        });
+
+        defineProp(list, 'splice', function () {
+            for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+                args[_key2] = arguments[_key2];
+            }
+
+            args = args.map(model);
+
+            var start = args.shift();
+
+            var deleteCount = args.shift();
+
+            var result = Array.prototype.splice.apply(list, [start, deleteCount].concat(args));
+
+            if (list._loops) {
+
+                for (var j = 0; j < deleteCount; j++) {
+
+                    list._loops.forEach(function (loop) {
+                        return loop.remove(start);
+                    });
+                }
+
+                list._loops.forEach(function (loop) {
+
+                    args.forEach(function (arg, j) {
+                        return loop.bind(list, arg, start + j, true);
+                    });
+                });
+            }
+
+            set(list, true);
+
+            return result;
+        });
+
+        defineProp(list, 'unshift', function () {
+            for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+                args[_key3] = arguments[_key3];
+            }
+
+            args = args.map(model);
+
+            list._loops.forEach(function (loop) {
+
+                args.forEach(function (arg, i) {
+                    return loop.bind(list, arg, i, true);
+                });
+            });
+
+            Array.prototype.unshift.apply(list, args);
+
+            set(list, true);
+
+            return list;
+        });
+    }
 
     /**
      * Selects an array of DOM nodes using a CSS selector.
@@ -227,20 +390,19 @@
     };
 
     /**
-     * Checks to see if a template contains expressions. If so, binds them
-     * to a view model so that any changes to the relevant properties will
-     * trigger the binding.
+     * Checks to see if a template contains expressions. If so, binds the
+     * relevant properties of the view model to the DOM node being parsed.
      * 
      * @param  {Object} opts - binding options, as follows:
      *          {
-     *              tmpl   : {string} the template string to check
-     *              one : {boolean} this template is guaranteed to have one expression
-     *              replace: {function} handles in-progress template evaluations
-     *              commit : {function} handles completed template evaluations
+     *              tmpl    : {string} the template string to check
+     *              one     : {boolean} this template is guaranteed to have one expression
+     *              replace : {function} handles incremental evaluations of templates with multiple expressions
+     *              commit  : {function} handles completed template evaluations
      *          }
      *
      * @param  {Object} vm - the view model for the expression
-     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
+     * @param  {Object} loopMethods - set and reset methods for rendering loops. Optional.
      * @return {undefined}
      */
     function bind(opts, vm, loopMethods) {
@@ -248,7 +410,17 @@
         var expressions = opts.one ? [opts.tmpl] : opts.tmpl.match(uav.expRX);
 
         if (expressions) {
-            var binding = function binding(doBind) {
+
+            /**
+             * binding is the function that runs when a bound model property is changed.
+             * 
+             * @param  {Boolean} doBind - whether a new binding should be created (only the first run)
+             * @param  {Boolean} preventLoopRender - a flag passed from bindArrayMethods, indicating
+             *                                       that any rendering required by this change has
+             *                                       been completed by the array method override.
+             * @return {undefined}
+             */
+            var binding = function binding(doBind, preventLoopRender) {
 
                 expressions.forEach(function (expression) {
 
@@ -266,12 +438,12 @@
 
                     var value = evaluate(code, vm);
 
+                    currentBinding = null;
+
                     if (loopMethods) {
 
                         loopMethods.reset(vm);
                     }
-
-                    currentBinding = null;
 
                     if (_typeof(value, 'boolean')) {
 
@@ -281,7 +453,7 @@
                         value = '';
                     }
 
-                    opts.replace(value, expression);
+                    opts.replace(value, expression, preventLoopRender);
                 });
 
                 if (opts.commit) {
@@ -344,7 +516,7 @@
 
             node.removeAttribute('uav-as');
 
-            var loopData = {
+            var loop = {
                 node: node,
                 as: loopVars[0],
                 index: loopVars[1],
@@ -357,196 +529,90 @@
 
                         node.children[i].remove();
                     }
-                }
-            };
+                },
+                bind: function bind(list, item, i, insert) {
 
-            node.innerHTML = '';
+                    function binding() {
+                        console.log('creating binding', loop.as);
+                        var childAtIndex = loop.node.children[i];
+
+                        var child = parse(loop.html, loop.node);
+
+                        var origAs = vm[loop.as];
+
+                        var origIndex = vm[loop.index];
+
+                        var loopMethods = {
+                            set: function set(_vm) {
+
+                                _vm[loop.as] = item;
+
+                                _vm[loop.index] = i;
+                            },
+                            reset: function reset(_vm) {
+
+                                _vm[loop.as] = origAs;
+
+                                _vm[loop.index] = origIndex;
+                            }
+                        };
+
+                        /**
+                         * Insert and bind a new node at the current index
+                         */
+                        if (insert && childAtIndex) {
+
+                            loop.node.insertBefore(render(child, vm, loopMethods), childAtIndex);
+
+                            /**
+                             * Unbind and replace the node at the current index
+                             */
+                        } else if (childAtIndex) {
+
+                            unbind(childAtIndex);
+
+                            loop.node.replaceChild(render(child, vm, loopMethods), childAtIndex);
+
+                            /**
+                             * Append and bind a new node
+                             */
+                        } else {
+
+                            loop.node.appendChild(render(child, vm, loopMethods));
+                        }
+                    }
+
+                    currentBinding = binding;
+
+                    binding();
+
+                    currentBinding = null;
+                }
+
+            };
 
             return {
                 loop: true,
                 tmpl: attribute.value,
                 one: true,
-                replace: function replace(list) {
+                replace: function replace(list, expression, preventLoopRender) {
+
+                    if (preventLoopRender) {
+
+                        return;
+                    }
+
+                    node.innerHTML = '';
 
                     list = model(list);
 
-                    if (!list._loops) {
+                    if (list._loops.indexOf(loop) === -1) {
 
-                        defineProp(list, '_loops', []);
+                        list._loops.push(loop);
                     }
-
-                    if (list._loops.indexOf(loopData) === -1) {
-
-                        list._loops.push(loopData);
-                    }
-
-                    function addBinding(item, i, insert) {
-
-                        var loops = insert ? list._loops : [loopData];
-
-                        function binding(doBind) {
-
-                            loops.forEach(function (loop) {
-
-                                var childAtIndex = loop.node.children[i];
-
-                                var child = parse(loop.html, loop.node);
-
-                                if (doBind) {
-
-                                    currentBinding = binding;
-                                }
-
-                                var origAs = vm[loop.as];
-
-                                var origIndex = vm[loop.index];
-
-                                var loopMethods = {
-                                    set: function set(_vm) {
-
-                                        _vm[loop.as] = item;
-
-                                        _vm[loop.index] = i;
-                                    },
-                                    reset: function reset(_vm) {
-
-                                        _vm[loop.as] = origAs;
-
-                                        _vm[loop.index] = origIndex;
-                                    }
-                                };
-
-                                if (insert && childAtIndex) {
-
-                                    loop.node.insertBefore(render(child, vm, loopMethods), childAtIndex);
-                                } else if (childAtIndex) {
-
-                                    unbind(childAtIndex);
-
-                                    loop.node.replaceChild(render(child, vm, loopMethods), childAtIndex);
-                                } else {
-
-                                    loop.node.appendChild(render(child, vm, loopMethods));
-                                }
-
-                                currentBinding = null;
-                            });
-                        }
-
-                        binding(true);
-                    }
-
-                    defineProp(list, 'push', function () {
-                        for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-                            args[_key] = arguments[_key];
-                        }
-
-                        args = args.map(model);
-
-                        args.forEach(function (item, i) {
-                            return addBinding(item, list.length + i, true);
-                        });
-
-                        return Array.prototype.push.apply(list, args);
-                    });
-
-                    defineProp(list, 'pop', function () {
-
-                        list._loops.forEach(function (loop) {
-                            return loop.remove(list.length - 1);
-                        });
-
-                        return Array.prototype.pop.apply(list);
-                    });
-
-                    defineProp(list, 'reverse', function () {
-
-                        Array.prototype.reverse.apply(list);
-
-                        list._loops.forEach(function (loop) {
-
-                            var children = Array.from(loop.node.children);
-
-                            for (var i = list.length - 1; i >= 0; i--) {
-
-                                loop.node.appendChild(children[i]);
-                            }
-                        });
-
-                        return list;
-                    });
-
-                    defineProp(list, 'shift', function () {
-
-                        list._loops.forEach(function (loop) {
-                            return loop.remove(0);
-                        });
-
-                        return Array.prototype.shift.apply(list);
-                    });
-
-                    defineProp(list, 'sort', function (sort) {
-
-                        var temp = Array.from(list);
-
-                        Array.prototype.sort.call(list, sort);
-
-                        list._loops.forEach(function (loop) {
-
-                            var children = [];
-
-                            list.forEach(function (item) {
-                                return children.push(loop.node.children[temp.indexOf(item)]);
-                            });
-
-                            children.forEach(function (child, i) {
-                                return loop.node.insertBefore(child, loop.node.children[i]);
-                            });
-                        });
-
-                        return list;
-                    });
-
-                    defineProp(list, 'splice', function (start, deleteCount) {
-                        for (var _len2 = arguments.length, items = Array(_len2 > 2 ? _len2 - 2 : 0), _key2 = 2; _key2 < _len2; _key2++) {
-                            items[_key2 - 2] = arguments[_key2];
-                        }
-
-                        items = items.map(model);
-
-                        list._loops.forEach(function (loop) {
-
-                            for (var i = 0; i < deleteCount; i++) {
-
-                                loop.remove(start);
-                            }
-                        });
-
-                        items.forEach(function (item, i) {
-                            return addBinding(item, start + i, true);
-                        });
-
-                        return Array.prototype.splice.apply(list, [start, deleteCount].concat(items));
-                    });
-
-                    defineProp(list, 'unshift', function () {
-                        for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-                            args[_key3] = arguments[_key3];
-                        }
-
-                        args = args.map(model);
-
-                        args.forEach(function (item, i) {
-                            return addBinding(item, i, true);
-                        });
-
-                        Array.prototype.unshift.apply(list, args);
-
-                        return list;
-                    });
 
                     list.forEach(function (item, i) {
-                        return addBinding(item, i);
+                        return loop.bind(list, item, i);
                     });
                 }
             };
@@ -699,7 +765,7 @@
      * @param  {Element} node - the owner of the attribute 
      * @param  {Object} attribute - an object with name and value properties
      * @param  {Object} vm - the current view model
-     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
+     * @param  {Object} loopMethods - set and reset methods for rendering loops. Optional.
      * @return {Boolean} isLoop - indicates whether the node contains a template loop
      */
     function bindAttribute(node, attribute, vm, loopMethods) {
@@ -733,7 +799,7 @@
      * 
      * @param  {Element} node - the text node to parse
      * @param  {Object} vm - the current view model
-     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
+     * @param  {Object} loopMethods - set and reset methods for rendering loops. Optional.
      * @return {undefined}
      */
     function bindTextNode(node, vm, loopMethods) {
@@ -778,7 +844,7 @@
      * 
      * @param  {Element} node - the starting text node
      * @param  {Object} vm - the current view model
-     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
+     * @param  {Object} loopMethods - set and reset methods for rendering loops. Optional.
      * @return {undefined}
      */
     function explodeTextNode(node, vm, loopMethods) {
@@ -812,7 +878,7 @@
      * 
      * @param  {Element} node - the node to parse
      * @param  {Object} vm - the current view model
-     * @param  {Object} loopMethods - an object with set and reset methods to prepare the vm for use in a loop and clean up afterwards (optional).
+     * @param  {Object} loopMethods - set and reset methods for rendering loops. Optional.
      * @return {Element}
      */
     function render(node, vm, loopMethods) {
@@ -821,6 +887,10 @@
 
         currentNode = node;
 
+        /**
+         * node._uav is where we'll store garbage collection functions
+         * to run if the node is removed or replaced later.
+         */
         defineProp(currentNode, '_uav', []);
 
         forEachAttribute(node, function (attribute) {
@@ -898,7 +968,18 @@
             return data;
         }
 
-        var vm = Array.isArray(data) ? [] : {};
+        var vm = {};
+
+        if (Array.isArray(data)) {
+
+            vm = [];
+
+            /**
+             * Array._loops is where we'll store information
+             * about the template loops bound to this array.
+             */
+            defineProp(vm, '_loops', []);
+        }
 
         /**
          * The hidden _uav property contains all
@@ -919,11 +1000,10 @@
                     value = model(value);
                 }
 
-                // if (Array.isArray(value)) {
+                if (Array.isArray(value)) {
 
-                //     bindArrayMethods(value);
-
-                // }
+                    bindArrayMethods(value, set);
+                }
 
                 return value;
             }
@@ -934,11 +1014,14 @@
              */
             function get() {
 
+                /**
+                 * If there is currently a binding being created at the
+                 * time that this model property is accessed, it means
+                 * that this property is referenced within the template
+                 * expression, and therefore should be bound.
+                 */
                 if (currentBinding) {
 
-                    /**
-                     * Associate the binding with this property.
-                     */
                     var binding = currentBinding;
 
                     vm._uav[key] = vm._uav[key] || [];
@@ -970,8 +1053,13 @@
 
             /**
              * Handle changes to a property on the model.
+             *
+             * @param {any} value - the property's new value
+             * @param {Boolean} preventLoopRender - a flag passed by bindArrayMethods,
+             *                                      indicating that any DOM updates
+             *                                      are already complete.
              */
-            function set(value) {
+            function set(value, preventLoopRender) {
 
                 if (data[key] !== value || _typeof(value, 'object')) {
 
@@ -1003,7 +1091,7 @@
                     if (vm._uav[key]) {
 
                         vm._uav[key].forEach(function (fn) {
-                            return fn();
+                            return fn(false, preventLoopRender);
                         });
                     }
                 }
@@ -1026,10 +1114,11 @@
      * Creates a component for the given model and template.
      * Renders the component into the specified element, if any.
      * 
-     * @param  {Object} vm - the data for the component's view model (optional)
-     * @param  {String} tmpl - the component's HTML template
-     * @param  {String} selector - the CSS selector for the node in 
+     * @param {Object} vm - the data for the component's view model (optional)
+     * @param {String} tmpl - the component's HTML template
+     * @param {String} selector - the CSS selector for the node in 
      *          which to render the component (optional)
+     * @param {Function} callback - runs after the render, passed the root node (optional)
      * @return {Object} vm
      */
     function component(vm, tmpl, selector) {

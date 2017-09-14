@@ -1,6 +1,6 @@
 ![uav logo](https://uav.js.org/images/uav.small.png)
 
-uav aims to demonstrate that complexity is a problem in today's front end codebases. Think of it as an alternative to React, Vue, or Angular, but easier to use, and only 2KB compressed.
+uav aims to demonstrate that complexity is a problem in today's front end codebases. Think of it as an alternative to React, Vue, or Angular, but easier to use, and under 2.5KB compressed.
 
 * [Hello World](#hello-world)
 * [Todo App](#todo-app)
@@ -46,7 +46,7 @@ component.message = 'Goodbye, world.';
 
 ## Todo App
 
-[Click here for the live example](http://jsfiddle.net/t16bzg3m/11/)
+[Click here for the live example](http://jsfiddle.net/t16bzg3m/12/)
 
 ## Creating a Component
 
