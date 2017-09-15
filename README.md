@@ -46,7 +46,7 @@ component.message = 'Goodbye, world.';
 
 ## Todo App
 
-[Click here for the live example](http://jsfiddle.net/t16bzg3m/12/)
+[Click here for the live example](http://jsfiddle.net/t16bzg3m/13/)
 
 ## Creating a Component
 
@@ -348,9 +348,11 @@ Get an array of all matched elements:
 
 ## Two Way Data Binding
 
-Two way binding is cool, but is only applicable to form interfaces, and can encourage lazy coding practices. Furthermore, it requires creating `oninput` event listeners behind the scenes, when often the use case only requires a `change` or `submit` listener. For these reasons it is included as a separate file, `uav-bind.js`.
+Two way binding is cool, but is only applicable to form interfaces, and can encourage lazy coding practices. Furthermore, it requires creating `oninput` event listeners behind the scenes, when often the use case only requires a `change` or `submit` listener. For these reasons it is included as a separate file, `uav-bind.js`. 
 
 After including this file, any HTML input types that support the `value` property can be two-way bound using the `uav-bind` attribute. This means that when a user changes the value of any input element, the model will automatically update to reflect the new value, and if the model property changes, the input's value will update accordingly.
+
+> To import `uav-bind.js` using commonjs or es6 modules, import the path `uav/dist/uav-bind`.
 
 ```
 uav.component(

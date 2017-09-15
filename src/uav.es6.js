@@ -1249,7 +1249,7 @@
 
             const oldComponent = app.firstElementChild;
 
-            requestAnimationFrame(() => unbind(oldComponent));
+            setTimeout(() => unbind(oldComponent));
 
             app.innerHTML = '';
 
@@ -1261,7 +1261,7 @@
             
             if (_typeof(arguments[i], 'function')) {
 
-                requestAnimationFrame(() => arguments[i](vm._el));
+                setTimeout(() => arguments[i](vm._el));
 
                 break;
 

@@ -1161,7 +1161,7 @@
 
             var oldComponent = app.firstElementChild;
 
-            requestAnimationFrame(function () {
+            setTimeout(function () {
                 return unbind(oldComponent);
             });
 
@@ -1174,7 +1174,7 @@
 
             if (_typeof(_arguments[i], 'function')) {
 
-                requestAnimationFrame(function () {
+                setTimeout(function () {
                     return _arguments[i](vm._el);
                 });
 
