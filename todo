@@ -1,5 +1,3 @@
-- test multidimensional arrays
-- test two way binding on all input types
 - two way binding probably doesn't work in loops
 - browser testing
 

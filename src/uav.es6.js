@@ -110,7 +110,9 @@
 
                 for (let i = list.length - args.length; i < list.length; i++) {
 
-                    loop.bind(list, list[i], i, true);
+                    list._watch(i, list[i]);
+
+                    loop.bind(list, i, true);
 
                 }
 
@@ -202,7 +204,7 @@
 
             if (list._loops) {
 
-                for (let j = 0; j < deleteCount; j++) {
+                for (let i = 0; i < deleteCount; i++) {
 
                     list._loops.forEach(loop => loop.remove(start));
 
@@ -210,7 +212,13 @@
 
                 list._loops.forEach(loop => {
 
-                    args.forEach((arg, j) => loop.bind(list, arg, start + j, true));
+                    args.forEach((arg, i) => {
+
+                        list._watch(i, list[start + i]);
+
+                        loop.bind(list, start + i, true);
+
+                    });
 
                 });
 
@@ -226,13 +234,19 @@
 
             args = args.map(model);
 
+            Array.prototype.unshift.apply(list, args);
+
             list._loops.forEach(loop => {
 
-                args.forEach((arg, i) => loop.bind(list, arg, i, true));
+                args.forEach((arg, i) => {
+
+                    list._watch(i, list[i]);
+
+                    loop.bind(list, i, true);
+
+                });
 
             });
-
-            Array.prototype.unshift.apply(list, args);
 
             set(list, true);
 
@@ -348,7 +362,7 @@
 
         try {
 
-            return new Function(`with(arguments[0]){return ${expression}}`)(vm);
+            return new Function(`with(arguments[0]){return ${expression}}`).call(vm, vm);
 
         } catch (err) {
 
@@ -541,10 +555,10 @@
                     }
 
                 },
-                bind: (list, item, i, insert) => {
+                bind: (list, i, insert) => {
 
-                    function binding() {
-                        console.log('creating binding', loop.as);
+                    function binding(doBind) {
+
                         const childAtIndex = loop.node.children[i];
 
                         const child = parse(loop.html, loop.node);
@@ -557,9 +571,13 @@
 
                             set(_vm) {
 
-                                _vm[loop.as] = item;
+                                _vm[loop.as] = list[i];
+
+                                if (loop.index) {
                                 
-                                _vm[loop.index] = i;
+                                    _vm[loop.index] = i;
+
+                                }
 
                             },
 
@@ -567,25 +585,33 @@
 
                                 _vm[loop.as] = origAs;
 
-                                _vm[loop.index] = origIndex;
+                                if (loop.index) {
+
+                                    _vm[loop.index] = origIndex;
+
+                                }
 
                             }
 
                         };
 
+                        if (doBind) {
+
+                            currentBinding = binding;
+
+                        }
+
                         /**
                          * Insert and bind a new node at the current index
                          */
-                        if (insert && childAtIndex) {
+                        if (insert && doBind && childAtIndex) {
 
                             loop.node.insertBefore(render(child, vm, loopMethods), childAtIndex);
 
                         /**
-                         * Unbind and replace the node at the current index
+                         * Replace and bind the node at the current index
                          */
                         } else if (childAtIndex) {
-
-                            unbind(childAtIndex);
 
                             loop.node.replaceChild(render(child, vm, loopMethods), childAtIndex);
 
@@ -598,13 +624,11 @@
 
                         }
 
+                        currentBinding = null;
+
                     }
 
-                    currentBinding = binding;
-
-                    binding();
-
-                    currentBinding = null;
+                    binding(true);
 
                 }
 
@@ -632,7 +656,7 @@
 
                     }
 
-                    list.forEach((item, i) => loop.bind(list, item, i));
+                    list.forEach((item, i) => loop.bind(list, i));
 
                 }
             };
@@ -904,27 +928,27 @@
 
         const parts = node.textContent.split(uav.expRX);
 
-        const parent = node.parentNode;
+        if (parts.length > 1) {
 
-        let lastNode = node;
+            const parent = node.parentNode;
 
-        parts.forEach(part => {
+            parts.forEach(part => {
 
-            if (part) {
+                if (part.trim()) {
 
-                const newNode = document.createTextNode(part);
+                    const newNode = document.createTextNode(part);
 
-                parent.insertBefore(newNode, lastNode.nextSibling);
+                    parent.insertBefore(newNode, node);
 
-                bindTextNode(newNode, vm, loopMethods);
+                    bindTextNode(newNode, vm, loopMethods);
 
-                lastNode = newNode;
+                }
 
-            }
+            });
 
-        });
+            parent.removeChild(node);
 
-        parent.removeChild(node);
+        }
 
     }
 
@@ -1056,7 +1080,7 @@
          */
         defineProp(vm, '_uav', {});
 
-        Object.keys(data).forEach(key => {
+        defineProp(vm, '_watch', (key, val) => {
 
             /**
              * The processValue helper adds getters
@@ -1175,7 +1199,7 @@
 
             }
 
-            data[key] = processValue(data[key]);
+            data[key] = processValue(val);
 
             Object.defineProperty(vm, key, {
                 get,
@@ -1184,7 +1208,9 @@
                 configurable: true
             });
 
-        });
+        });        
+
+        Object.keys(data).forEach(key => vm._watch(key, data[key]));
 
         return vm;
 

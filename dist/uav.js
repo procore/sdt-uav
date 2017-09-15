@@ -117,7 +117,9 @@
 
                 for (var i = list.length - args.length; i < list.length; i++) {
 
-                    loop.bind(list, list[i], i, true);
+                    list._watch(i, list[i]);
+
+                    loop.bind(list, i, true);
                 }
             });
 
@@ -210,7 +212,7 @@
 
             if (list._loops) {
 
-                for (var j = 0; j < deleteCount; j++) {
+                for (var i = 0; i < deleteCount; i++) {
 
                     list._loops.forEach(function (loop) {
                         return loop.remove(start);
@@ -219,8 +221,11 @@
 
                 list._loops.forEach(function (loop) {
 
-                    args.forEach(function (arg, j) {
-                        return loop.bind(list, arg, start + j, true);
+                    args.forEach(function (arg, i) {
+
+                        list._watch(i, list[start + i]);
+
+                        loop.bind(list, start + i, true);
                     });
                 });
             }
@@ -237,14 +242,17 @@
 
             args = args.map(model);
 
+            Array.prototype.unshift.apply(list, args);
+
             list._loops.forEach(function (loop) {
 
                 args.forEach(function (arg, i) {
-                    return loop.bind(list, arg, i, true);
+
+                    list._watch(i, list[i]);
+
+                    loop.bind(list, i, true);
                 });
             });
-
-            Array.prototype.unshift.apply(list, args);
 
             set(list, true);
 
@@ -351,7 +359,7 @@
 
         try {
 
-            return new Function('with(arguments[0]){return ' + expression + '}')(vm);
+            return new Function('with(arguments[0]){return ' + expression + '}').call(vm, vm);
         } catch (err) {
 
             return INVALID_EXPRESSION;
@@ -530,10 +538,10 @@
                         node.children[i].remove();
                     }
                 },
-                bind: function bind(list, item, i, insert) {
+                bind: function bind(list, i, insert) {
 
-                    function binding() {
-                        console.log('creating binding', loop.as);
+                    function binding(doBind) {
+
                         var childAtIndex = loop.node.children[i];
 
                         var child = parse(loop.html, loop.node);
@@ -545,31 +553,40 @@
                         var loopMethods = {
                             set: function set(_vm) {
 
-                                _vm[loop.as] = item;
+                                _vm[loop.as] = list[i];
 
-                                _vm[loop.index] = i;
+                                if (loop.index) {
+
+                                    _vm[loop.index] = i;
+                                }
                             },
                             reset: function reset(_vm) {
 
                                 _vm[loop.as] = origAs;
 
-                                _vm[loop.index] = origIndex;
+                                if (loop.index) {
+
+                                    _vm[loop.index] = origIndex;
+                                }
                             }
                         };
+
+                        if (doBind) {
+
+                            currentBinding = binding;
+                        }
 
                         /**
                          * Insert and bind a new node at the current index
                          */
-                        if (insert && childAtIndex) {
+                        if (insert && doBind && childAtIndex) {
 
                             loop.node.insertBefore(render(child, vm, loopMethods), childAtIndex);
 
                             /**
-                             * Unbind and replace the node at the current index
+                             * Replace and bind the node at the current index
                              */
                         } else if (childAtIndex) {
-
-                            unbind(childAtIndex);
 
                             loop.node.replaceChild(render(child, vm, loopMethods), childAtIndex);
 
@@ -580,13 +597,11 @@
 
                             loop.node.appendChild(render(child, vm, loopMethods));
                         }
+
+                        currentBinding = null;
                     }
 
-                    currentBinding = binding;
-
-                    binding();
-
-                    currentBinding = null;
+                    binding(true);
                 }
 
             };
@@ -612,7 +627,7 @@
                     }
 
                     list.forEach(function (item, i) {
-                        return loop.bind(list, item, i);
+                        return loop.bind(list, i);
                     });
                 }
             };
@@ -851,25 +866,24 @@
 
         var parts = node.textContent.split(uav.expRX);
 
-        var parent = node.parentNode;
+        if (parts.length > 1) {
 
-        var lastNode = node;
+            var parent = node.parentNode;
 
-        parts.forEach(function (part) {
+            parts.forEach(function (part) {
 
-            if (part) {
+                if (part.trim()) {
 
-                var newNode = document.createTextNode(part);
+                    var newNode = document.createTextNode(part);
 
-                parent.insertBefore(newNode, lastNode.nextSibling);
+                    parent.insertBefore(newNode, node);
 
-                bindTextNode(newNode, vm, loopMethods);
+                    bindTextNode(newNode, vm, loopMethods);
+                }
+            });
 
-                lastNode = newNode;
-            }
-        });
-
-        parent.removeChild(node);
+            parent.removeChild(node);
+        }
     }
 
     /**
@@ -987,7 +1001,7 @@
          */
         defineProp(vm, '_uav', {});
 
-        Object.keys(data).forEach(function (key) {
+        defineProp(vm, '_watch', function (key, val) {
 
             /**
              * The processValue helper adds getters
@@ -1097,7 +1111,7 @@
                 }
             }
 
-            data[key] = processValue(data[key]);
+            data[key] = processValue(val);
 
             Object.defineProperty(vm, key, {
                 get: get,
@@ -1105,6 +1119,10 @@
                 enumerable: true,
                 configurable: true
             });
+        });
+
+        Object.keys(data).forEach(function (key) {
+            return vm._watch(key, data[key]);
         });
 
         return vm;

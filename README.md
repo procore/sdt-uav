@@ -6,7 +6,7 @@ uav aims to demonstrate that complexity is a problem in today's front end codeba
 * [Todo App](#todo-app)
 * [Creating a Component](#creating-a-component)
 * [Template Expressions](#template-expressions)
-  * [Text Expressions](#text-expressions)
+  * [Content Expressions](#content-expressions)
   * [Attribute Expressions](#attribute-expressions)
   * [Template Loops](#template-loops)
 * [Events](#events)
@@ -77,7 +77,7 @@ Regardless of what you are binding or where you are binding it, the syntax is al
 
 > You can change the template tag syntax with `uav.setTag()`. For example, to use `{{mustache}}` notation, call `uav.setTag('{{', '}}')` before creating any components.
 
-### Text Expressions:
+### Content Expressions:
 ```
 uav.component(
     { content: 'foo' },
@@ -348,9 +348,9 @@ Get an array of all matched elements:
 
 ## Two Way Data Binding
 
-Two way binding is cool, but is only applicable to form interfaces, and can encourage lazy coding practices. Furthermore, it requires creating `oninput` event listeners behind the scenes, when often your use case only requires `change` or `submit` listeners. For these reasons it is included as a separate file, `uav-bind.js`.
+Two way binding is cool, but is only applicable to form interfaces, and can encourage lazy coding practices. Furthermore, it requires creating `oninput` event listeners behind the scenes, when often the use case only requires a `change` or `submit` listener. For these reasons it is included as a separate file, `uav-bind.js`.
 
-After including this file, any HTML input types that support the `value` property can be two-way bound using the `uav-bind` attribute. When a user changes a value, the model will automatically update to reflect it.
+After including this file, any HTML input types that support the `value` property can be two-way bound using the `uav-bind` attribute. This means that when a user changes the value of any input element, the model will automatically update to reflect the new value, and if the model property changes, the input's value will update accordingly.
 
 ```
 uav.component(
@@ -370,6 +370,8 @@ uav.component({
     <input type="checkbox" uav-bind="items" value="3" name="check">3<br>`
 );
 ```
+
+[See a live demo of two way binding](http://jsfiddle.net/ap7cp5eq/1/)
 
 > `uav-bind.js` is 0.5KB compressed. 
 
@@ -394,7 +396,7 @@ uav.component({
 
 ### Unbind any DOM nodes you've manually detached
 
-When uav updates the DOM as a result of a change to a model, it automatically removes any bindings to DOM nodes that have been removed or replaced. However, if for some reason you manually remove or replace a bound DOM node, you can clean up any bindings associated with it by calling `uav.unbind(<Element>)`. There is no harm in calling `uav.unbind` on an element that does not have any associated bindings.
+When uav updates the DOM as a result of a change to a model, it automatically removes any bindings to DOM nodes that have been removed or replaced. However, if for some reason you manually remove or replace a bound DOM node, you can clean up any bindings associated with it by calling `uav.unbind(<Element>)`. 
 
 ## Collapsing Whitespace
 
