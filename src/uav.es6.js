@@ -1,5 +1,7 @@
 (() => {
 
+    let disableBindings;
+
     /*
      * Array.prototype.from shim for IE
      *
@@ -98,27 +100,27 @@
      * @param  {Function} set - the list's setter descriptor
      * @return {undefined}
      */
-    function bindArrayMethods(list, set) {
+    function bindArrayMethods(list) {
         
         defineProp(list, 'push', (...args) => {
 
-            args = args.map(model);
+            disableBindings = true;
 
             Array.prototype.push.apply(list, args);
 
+            disableBindings = false;
+
+            list.forEach(list._watch);
+
             list._loops.forEach(loop => {
 
-                for (let i = list.length - args.length; i < list.length; i++) {
+                args.forEach((arg, i) => {
 
-                    list._watch(i, list[i]);
+                    loop.binding(arg, list.length + i);
 
-                    loop.bind(list, i, true);
-
-                }
+                });
 
             });
-
-            set(list, true);
 
             return list;
 
@@ -128,9 +130,11 @@
 
             list._loops.forEach(loop => loop.remove(list.length - 1));
 
+            disableBindings = true;
+
             const result = Array.prototype.pop.call(list);
 
-            set(list, true);
+            disableBindings = false;
 
             return result;
 
@@ -150,9 +154,11 @@
 
             });
 
+            disableBindings = true;
+
             Array.prototype.reverse.call(list);
 
-            set(list, true);
+            disableBindings = false;
 
             return list;
 
@@ -162,9 +168,11 @@
 
             list._loops.forEach(loop => loop.remove(0));
 
+            disableBindings = true;
+
             const result = Array.prototype.shift.call(list);
 
-            set(list, true);
+            disableBindings = false;
 
             return result;
 
@@ -174,7 +182,11 @@
 
             const temp = Array.from(list);
 
+            disableBindings = true;
+
             Array.prototype.sort.call(list, sort);
+
+            disableBindings = false;
 
             list._loops.forEach(loop => {
 
@@ -186,21 +198,23 @@
 
             });
 
-            set(list, true);
-
             return list;
 
         });
 
         defineProp(list, 'splice', (...args) => {
 
-            args = args.map(model);
-
             const start = args.shift();
 
             const deleteCount = args.shift();
 
+            disableBindings = true;
+
             const result = Array.prototype.splice.apply(list, [start, deleteCount].concat(args));
+
+            disableBindings = false;
+
+            list.forEach(list._watch);
 
             if (list._loops) {
 
@@ -212,19 +226,11 @@
 
                 list._loops.forEach(loop => {
 
-                    args.forEach((arg, i) => {
-
-                        list._watch(i, list[start + i]);
-
-                        loop.bind(list, start + i, true);
-
-                    });
+                    args.forEach((arg, i) => loop.binding(arg, start + i, true));
 
                 });
 
             }
-
-            set(list, true);
 
             return result;
 
@@ -232,23 +238,19 @@
 
         defineProp(list, 'unshift', (...args) => {
 
-            args = args.map(model);
+            disableBindings = true;
 
             Array.prototype.unshift.apply(list, args);
 
+            disableBindings = false;
+
+            list.forEach(list._watch);
+
             list._loops.forEach(loop => {
 
-                args.forEach((arg, i) => {
-
-                    list._watch(i, list[i]);
-
-                    loop.bind(list, i, true);
-
-                });
+                args.forEach((item, i) => loop.binding(item, i, true));
 
             });
-
-            set(list, true);
 
             return list;
 
@@ -414,10 +416,9 @@
      *          }
      *
      * @param  {Object} vm - the view model for the expression
-     * @param  {Object} loopMethods - set and reset methods for rendering loops. Optional.
      * @return {undefined}
      */
-    function bind(opts, vm, loopMethods) {
+    function bind(opts, vm) {
 
         const expressions = opts.one ? [opts.tmpl] : opts.tmpl.match(uav.expRX);
 
@@ -427,22 +428,13 @@
              * binding is the function that runs when a bound model property is changed.
              * 
              * @param  {Boolean} doBind - whether a new binding should be created (only the first run)
-             * @param  {Boolean} preventLoopRender - a flag passed from bindArrayMethods, indicating
-             *                                       that any rendering required by this change has
-             *                                       been completed by the array method override.
              * @return {undefined}
              */
-            function binding(doBind, preventLoopRender) {
+            function binding(doBind) {
 
                 expressions.forEach(expression => {
 
                     const code = stripTags(expression);
-
-                    if (loopMethods) {
-
-                        loopMethods.set(vm);
-
-                    }
 
                     if (doBind) {
 
@@ -454,12 +446,6 @@
 
                     currentBinding = null;
 
-                    if (loopMethods) {
-
-                        loopMethods.reset(vm);
-
-                    }
-
                     if (_typeof(value, 'boolean')) {
 
                         value = value ? code : '';
@@ -470,7 +456,7 @@
 
                     }
 
-                    opts.replace(value, expression, preventLoopRender);
+                    opts.replace(value, expression);
 
                 });
 
@@ -555,80 +541,56 @@
                     }
 
                 },
-                bind: (list, i, insert) => {
+                binding: (item, i, insert) => {
 
-                    function binding(doBind) {
+                    const childAtIndex = loop.node.children[i];
 
-                        const childAtIndex = loop.node.children[i];
+                    const child = parse(loop.html, loop.node);
 
-                        const child = parse(loop.html, loop.node);
+                    const origAs = vm[loop.as];
 
-                        const origAs = vm[loop.as];
+                    const origIndex = vm[loop.index];
 
-                        const origIndex = vm[loop.index];
+                    vm[loop.as] = item;
 
-                        const loopMethods = {
+                    if (loop.index) {
 
-                            set(_vm) {
-
-                                _vm[loop.as] = list[i];
-
-                                if (loop.index) {
-                                
-                                    _vm[loop.index] = i;
-
-                                }
-
-                            },
-
-                            reset(_vm) {
-
-                                _vm[loop.as] = origAs;
-
-                                if (loop.index) {
-
-                                    _vm[loop.index] = origIndex;
-
-                                }
-
-                            }
-
-                        };
-
-                        if (doBind) {
-
-                            currentBinding = binding;
-
-                        }
-
-                        /**
-                         * Insert and bind a new node at the current index
-                         */
-                        if (insert && doBind && childAtIndex) {
-
-                            loop.node.insertBefore(render(child, vm, loopMethods), childAtIndex);
-
-                        /**
-                         * Replace and bind the node at the current index
-                         */
-                        } else if (childAtIndex) {
-
-                            loop.node.replaceChild(render(child, vm, loopMethods), childAtIndex);
-
-                        /**
-                         * Append and bind a new node
-                         */
-                        } else {
-
-                            loop.node.appendChild(render(child, vm, loopMethods));
-
-                        }
-
-                        currentBinding = null;
+                        vm[loop.index] = i;
 
                     }
 
-                    binding(true);
+                    /**
+                     * Insert and bind a new node at the current index
+                     */
+                    if (insert && childAtIndex) {
+
+                        loop.node.insertBefore(render(child, vm), childAtIndex);
+
+                    /**
+                     * Replace and bind the node at the current index
+                     */
+                    } else if (childAtIndex) {
+
+                        unbind(childAtIndex);
+
+                        loop.node.replaceChild(render(child, vm), childAtIndex);
+
+                    /**
+                     * Append and bind a new node
+                     */
+                    } else {
+
+                        loop.node.appendChild(render(child, vm));
+
+                    }
+
+                    vm[loop.as] = origAs;
+
+                    if (loop.index) {
+
+                        vm[loop.index] = origIndex;
+
+                    }
 
                 }
 
@@ -638,13 +600,7 @@
                 loop: true,
                 tmpl: attribute.value,
                 one: true,
-                replace: (list, expression, preventLoopRender) => {
-
-                    if (preventLoopRender) {
-
-                        return;
-
-                    }
+                replace: list => {
 
                     node.innerHTML = '';
 
@@ -656,7 +612,7 @@
 
                     }
 
-                    list.forEach((item, i) => loop.bind(list, i));
+                    list.forEach(loop.binding);
 
                 }
             };
@@ -831,10 +787,9 @@
      * @param  {Element} node - the owner of the attribute 
      * @param  {Object} attribute - an object with name and value properties
      * @param  {Object} vm - the current view model
-     * @param  {Object} loopMethods - set and reset methods for rendering loops. Optional.
      * @return {Boolean} isLoop - indicates whether the node contains a template loop
      */
-    function bindAttribute(node, attribute, vm, loopMethods) {
+    function bindAttribute(node, attribute, vm) {
 
         let isLoop;
 
@@ -846,7 +801,7 @@
 
                 node.removeAttribute(attribute.name);
 
-                bind(opts, vm, loopMethods);
+                bind(opts, vm);
 
                 if (opts.loop) {
 
@@ -858,7 +813,7 @@
 
         }
 
-        bind(defaultAttributeCheck(node, attribute), vm, loopMethods);
+        bind(defaultAttributeCheck(node, attribute), vm);
 
         return isLoop;
 
@@ -869,10 +824,9 @@
      * 
      * @param  {Element} node - the text node to parse
      * @param  {Object} vm - the current view model
-     * @param  {Object} loopMethods - set and reset methods for rendering loops. Optional.
      * @return {undefined}
      */
-    function bindTextNode(node, vm, loopMethods) {
+    function bindTextNode(node, vm) {
 
         bind({
             tmpl: node.textContent,
@@ -910,7 +864,7 @@
                 }
 
             }
-        }, vm, loopMethods);
+        }, vm);
 
     }
 
@@ -921,10 +875,9 @@
      * 
      * @param  {Element} node - the starting text node
      * @param  {Object} vm - the current view model
-     * @param  {Object} loopMethods - set and reset methods for rendering loops. Optional.
      * @return {undefined}
      */
-    function explodeTextNode(node, vm, loopMethods) {
+    function explodeTextNode(node, vm) {
 
         const parts = node.textContent.split(uav.expRX);
 
@@ -940,7 +893,7 @@
 
                     parent.insertBefore(newNode, node);
 
-                    bindTextNode(newNode, vm, loopMethods);
+                    bindTextNode(newNode, vm);
 
                 }
 
@@ -958,10 +911,9 @@
      * 
      * @param  {Element} node - the node to parse
      * @param  {Object} vm - the current view model
-     * @param  {Object} loopMethods - set and reset methods for rendering loops. Optional.
      * @return {Element}
      */
-    function render(node, vm, loopMethods) {
+    function render(node, vm) {
 
         let isLoop;
 
@@ -975,7 +927,7 @@
 
         forEachAttribute(node, attribute => {
 
-            if (bindAttribute(node, attribute, vm, loopMethods)) {
+            if (bindAttribute(node, attribute, vm)) {
 
                 isLoop = true;
 
@@ -993,11 +945,11 @@
 
             if (child.nodeType === 3) {
 
-                explodeTextNode(child, vm, loopMethods); 
+                explodeTextNode(child, vm); 
             
             } else {
 
-                render(child, vm, loopMethods);
+                render(child, vm);
 
             }
 
@@ -1062,15 +1014,13 @@
 
         let vm = {};
 
-        if (Array.isArray(data)) {
+        if (Array.isArray) {
 
             vm = [];
 
-            /**
-             * Array._loops is where we'll store information
-             * about the template loops bound to this array.
-             */
             defineProp(vm, '_loops', []);
+
+            bindArrayMethods(vm);
 
         }
 
@@ -1080,29 +1030,7 @@
          */
         defineProp(vm, '_uav', {});
 
-        defineProp(vm, '_watch', (key, val) => {
-
-            /**
-             * The processValue helper adds getters
-             * and setters for all children of the vm.
-             */
-            function processValue(value) {
-
-                if (isVmEligible(value)) {
-
-                    value = model(value);
-
-                }
-
-                if (Array.isArray(value)) {
-
-                    bindArrayMethods(value, set);
-
-                }
-
-                return value;
-
-            }
+        defineProp(vm, '_watch', (val, key) => {
 
             /**
              * If a property is accessed during evaluation of
@@ -1154,44 +1082,41 @@
              * Handle changes to a property on the model.
              *
              * @param {any} value - the property's new value
-             * @param {Boolean} preventLoopRender - a flag passed by bindArrayMethods,
-             *                                      indicating that any DOM updates
-             *                                      are already complete.
              */
-            function set(value, preventLoopRender) {
+            function set(value) {
 
                 if (data[key] !== value || _typeof(value, 'object')) {
 
                     /**
-                     * If the new value is eligible for use as a vm,
-                     * recursively add getters and setters.
+                     * Copy over any bindings from the previous value
                      */
-                    if (isVmEligible(value)) {
+                    if (data[key] && data[key]._uav) {
 
-                        value = processValue(value);
-
-                        /**
-                         * Copy over any bindings from the previous value
-                         */
-                        if (data[key] && data[key]._uav) {
-
-                            copyBindings(data[key], value);
-
-                        }
+                        copyBindings(data[key], value);
 
                     }
 
                     /**
                      * Store the new value.
                      */
-                    data[key] = value;
+                    data[key] = model(value);
 
                     /**
                      * Run any bindings to this property.
                      */
-                    if (vm._uav[key]) {
+                    if (!disableBindings) {
 
-                        vm._uav[key].forEach(fn => fn(false, preventLoopRender));
+                        if (vm._uav[key]) {
+
+                            vm._uav[key].forEach(fn => fn());
+
+                        }
+
+                        if (vm._loops) {
+
+                            vm._loops.forEach(loop => loop.binding(data[key], key));
+
+                        }
 
                     }
 
@@ -1199,7 +1124,7 @@
 
             }
 
-            data[key] = processValue(val);
+            data[key] = model(val);
 
             Object.defineProperty(vm, key, {
                 get,
@@ -1208,9 +1133,9 @@
                 configurable: true
             });
 
-        });        
+        });
 
-        Object.keys(data).forEach(key => vm._watch(key, data[key]));
+        Object.keys(data).forEach(key => vm._watch(data[key], key));
 
         return vm;
 

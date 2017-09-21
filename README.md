@@ -1,6 +1,8 @@
 ![uav logo](https://uav.js.org/images/uav.small.png)
 
-uav aims to demonstrate that complexity is a problem in today's front end codebases. Think of it as an alternative to React, Vue, or Angular, but easier to use, and under 2.5KB compressed.
+My name is Mike, and I think most developers are overcomplicating their JavaScript. I'm convinced that today's popular view frameworks (and the toolchains required to support them) introduce massive amounts of needless complexity. A typical modern front end stack is alienating to new developers, detrimental to productivity, and susceptible to becoming uncool at a moment's notice.
+
+In 2016 I decided to stop using view frameworks, and switched to vanilla JavaScript. I still wanted data-bound components, so I wrote some small utilities. Ironically, those utilities have turned into yet another JavaScript view library: `uav`. This one, however, is only 2.5KB after compression, and I'm pleased with the simplicity, syntax, and functionality.
 
 * [Hello World](#hello-world)
 * [Todo App](#todo-app)
@@ -22,8 +24,6 @@ uav aims to demonstrate that complexity is a problem in today's front end codeba
 * [Two Way Data Binding](#two-way-data-binding)
 * [Performance Notes](#performance-notes)
 * [Browser Compatibility](#browser-compatibility)
-
-> The goal of uav is not adoption. The goal is to show that the problems faced by modern web apps are not complex enough to justify the millions of developer hours our industry has invested complicated frameworks. 
 
 ## Hello World
 
@@ -408,7 +408,7 @@ Using multiline template strings creates unnecessary whitespace in your JavaScri
 
 ## Browser Compatibility
 
-IE9+
+IE9+.
 
 ## Coming Soon
 
