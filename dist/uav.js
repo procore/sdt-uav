@@ -1,7 +1,5 @@
 (function () {
 
-    var disableBindings = void 0;
-
     /*
      * Array.prototype.from shim for IE
      *
@@ -111,19 +109,19 @@
                 args[_key] = arguments[_key];
             }
 
-            disableBindings = true;
+            var startIndex = list.length;
 
-            Array.prototype.push.apply(list, args);
+            args = args.map(model);
 
-            disableBindings = false;
-
-            list.forEach(list._watch);
+            args.forEach(function (arg) {
+                return list._watch(arg, list.length);
+            });
 
             list._loops.forEach(function (loop) {
 
                 args.forEach(function (arg, i) {
 
-                    loop.binding(arg, list.length + i);
+                    loop.binding(arg, startIndex + i);
                 });
             });
 
@@ -136,34 +134,7 @@
                 return loop.remove(list.length - 1);
             });
 
-            disableBindings = true;
-
-            var result = Array.prototype.pop.call(list);
-
-            disableBindings = false;
-
-            return result;
-        });
-
-        defineProp(list, 'reverse', function () {
-
-            list._loops.forEach(function (loop) {
-
-                var children = Array.from(loop.node.children);
-
-                for (var i = list.length - 1; i >= 0; i--) {
-
-                    loop.node.appendChild(children[i]);
-                }
-            });
-
-            disableBindings = true;
-
-            Array.prototype.reverse.call(list);
-
-            disableBindings = false;
-
-            return list;
+            return Array.prototype.pop.call(list);
         });
 
         defineProp(list, 'shift', function () {
@@ -172,39 +143,9 @@
                 return loop.remove(0);
             });
 
-            disableBindings = true;
-
             var result = Array.prototype.shift.call(list);
 
-            disableBindings = false;
-
             return result;
-        });
-
-        defineProp(list, 'sort', function (sort) {
-
-            var temp = Array.from(list);
-
-            disableBindings = true;
-
-            Array.prototype.sort.call(list, sort);
-
-            disableBindings = false;
-
-            list._loops.forEach(function (loop) {
-
-                var nodes = [];
-
-                list.forEach(function (value) {
-                    return nodes.push(loop.node.children[temp.indexOf(value)]);
-                });
-
-                nodes.forEach(function (child, j) {
-                    return loop.node.insertBefore(child, loop.node.children[j]);
-                });
-            });
-
-            return list;
         });
 
         defineProp(list, 'splice', function () {
@@ -212,33 +153,38 @@
                 args[_key2] = arguments[_key2];
             }
 
+            var originalLength = list.length;
+
             var start = args.shift();
 
             var deleteCount = args.shift();
 
-            disableBindings = true;
+            args = args.map(model);
 
             var result = Array.prototype.splice.apply(list, [start, deleteCount].concat(args));
 
-            disableBindings = false;
+            var _loop = function _loop(i) {
 
-            list.forEach(list._watch);
-
-            if (list._loops) {
-
-                for (var i = 0; i < deleteCount; i++) {
-
-                    list._loops.forEach(function (loop) {
-                        return loop.remove(start);
-                    });
-                }
+                list._watch(list[i], i);
 
                 list._loops.forEach(function (loop) {
-
-                    args.forEach(function (arg, i) {
-                        return loop.binding(arg, start + i, true);
-                    });
+                    return loop.binding(list[i], i);
                 });
+            };
+
+            for (var i = originalLength; i < list.length; i++) {
+                _loop(i);
+            }
+
+            var _loop2 = function _loop2(i) {
+
+                list._loops.forEach(function (loop) {
+                    return loop.remove(i);
+                });
+            };
+
+            for (var i = list.length; i < originalLength; i++) {
+                _loop2(i);
             }
 
             return result;
@@ -249,20 +195,24 @@
                 args[_key3] = arguments[_key3];
             }
 
-            disableBindings = true;
+            var originalLength = list.length;
+
+            args = args.map(model);
 
             Array.prototype.unshift.apply(list, args);
 
-            disableBindings = false;
+            var _loop3 = function _loop3(i) {
 
-            list.forEach(list._watch);
+                list._watch(list[i], i);
 
-            list._loops.forEach(function (loop) {
-
-                args.forEach(function (item, i) {
-                    return loop.binding(item, i, true);
+                list._loops.forEach(function (loop) {
+                    return loop.binding(list[i], i);
                 });
-            });
+            };
+
+            for (var i = originalLength; i < list.length; i++) {
+                _loop3(i);
+            }
 
             return list;
         });
@@ -367,7 +317,7 @@
 
         try {
 
-            return new Function('with(arguments[0]){return ' + expression + '}').call(vm, vm);
+            return new Function('with(arguments[0]){return ' + expression + '}')(vm);
         } catch (err) {
 
             return INVALID_EXPRESSION;
@@ -420,7 +370,7 @@
      * @param  {Object} vm - the view model for the expression
      * @return {undefined}
      */
-    function bind(opts, vm) {
+    function bind(opts, vm, loopMethods) {
 
         var expressions = opts.one ? [opts.tmpl] : opts.tmpl.match(uav.expRX);
 
@@ -443,9 +393,19 @@
                         currentBinding = binding;
                     }
 
+                    if (loopMethods) {
+
+                        loopMethods.set(vm);
+                    }
+
                     var value = evaluate(code, vm);
 
                     currentBinding = null;
+
+                    if (loopMethods) {
+
+                        loopMethods.reset(vm);
+                    }
 
                     if (_typeof(value, 'boolean')) {
 
@@ -542,19 +502,33 @@
 
                     var origIndex = vm[loop.index];
 
-                    vm[loop.as] = item;
+                    var loopMethods = {
+                        set: function set(_vm) {
 
-                    if (loop.index) {
+                            _vm[loop.as] = item;
 
-                        vm[loop.index] = i;
-                    }
+                            if (loop.index) {
+
+                                _vm[loop.index] = i;
+                            }
+                        },
+                        reset: function reset(_vm) {
+
+                            _vm[loop.as] = origAs;
+
+                            if (loop.index) {
+
+                                _vm[loop.index] = origIndex;
+                            }
+                        }
+                    };
 
                     /**
                      * Insert and bind a new node at the current index
                      */
                     if (insert && childAtIndex) {
 
-                        loop.node.insertBefore(render(child, vm), childAtIndex);
+                        loop.node.insertBefore(render(child, vm, loopMethods), childAtIndex);
 
                         /**
                          * Replace and bind the node at the current index
@@ -563,21 +537,14 @@
 
                         unbind(childAtIndex);
 
-                        loop.node.replaceChild(render(child, vm), childAtIndex);
+                        loop.node.replaceChild(render(child, vm, loopMethods), childAtIndex);
 
                         /**
                          * Append and bind a new node
                          */
                     } else {
 
-                        loop.node.appendChild(render(child, vm));
-                    }
-
-                    vm[loop.as] = origAs;
-
-                    if (loop.index) {
-
-                        vm[loop.index] = origIndex;
+                        loop.node.appendChild(render(child, vm, loopMethods));
                     }
                 }
 
@@ -752,7 +719,7 @@
      * @param  {Object} vm - the current view model
      * @return {Boolean} isLoop - indicates whether the node contains a template loop
      */
-    function bindAttribute(node, attribute, vm) {
+    function bindAttribute(node, attribute, vm, loopMethods) {
 
         var isLoop = void 0;
 
@@ -764,7 +731,7 @@
 
                 node.removeAttribute(attribute.name);
 
-                bind(opts, vm);
+                bind(opts, vm, loopMethods);
 
                 if (opts.loop) {
 
@@ -773,7 +740,7 @@
             }
         }
 
-        bind(defaultAttributeCheck(node, attribute), vm);
+        bind(defaultAttributeCheck(node, attribute), vm, loopMethods);
 
         return isLoop;
     }
@@ -785,7 +752,7 @@
      * @param  {Object} vm - the current view model
      * @return {undefined}
      */
-    function bindTextNode(node, vm) {
+    function bindTextNode(node, vm, loopMethods) {
 
         bind({
             tmpl: node.textContent,
@@ -817,7 +784,7 @@
                     }
                 }
             }
-        }, vm);
+        }, vm, loopMethods);
     }
 
     /**
@@ -829,7 +796,7 @@
      * @param  {Object} vm - the current view model
      * @return {undefined}
      */
-    function explodeTextNode(node, vm) {
+    function explodeTextNode(node, vm, loopMethods) {
 
         var parts = node.textContent.split(uav.expRX);
 
@@ -845,7 +812,7 @@
 
                     parent.insertBefore(newNode, node);
 
-                    bindTextNode(newNode, vm);
+                    bindTextNode(newNode, vm, loopMethods);
                 }
             });
 
@@ -861,7 +828,7 @@
      * @param  {Object} vm - the current view model
      * @return {Element}
      */
-    function render(node, vm) {
+    function render(node, vm, loopMethods) {
 
         var isLoop = void 0;
 
@@ -875,7 +842,7 @@
 
         forEachAttribute(node, function (attribute) {
 
-            if (bindAttribute(node, attribute, vm)) {
+            if (bindAttribute(node, attribute, vm, loopMethods)) {
 
                 isLoop = true;
             }
@@ -890,10 +857,10 @@
 
             if (child.nodeType === 3) {
 
-                explodeTextNode(child, vm);
+                explodeTextNode(child, vm, loopMethods);
             } else {
 
-                render(child, vm);
+                render(child, vm, loopMethods, loopMethods);
             }
         });
 
@@ -950,7 +917,7 @@
 
         var vm = {};
 
-        if (Array.isArray) {
+        if (Array.isArray(data)) {
 
             vm = [];
 
@@ -993,9 +960,12 @@
                      */
                     currentNode._uav.push(function () {
 
-                        var index = vm._uav[key].indexOf(binding);
+                        if (vm._uav[key]) {
 
-                        vm._uav[key].splice(index, 1);
+                            var index = vm._uav[key].indexOf(binding);
+
+                            vm._uav[key].splice(index, 1);
+                        }
 
                         binding = null;
                     });
@@ -1019,10 +989,14 @@
 
                 if (data[key] !== value || _typeof(value, 'object')) {
 
+                    var alreadyVM = value && value._uav;
+
+                    value = model(value);
+
                     /**
                      * Copy over any bindings from the previous value
                      */
-                    if (data[key] && data[key]._uav) {
+                    if (!alreadyVM && data[key] && data[key]._uav) {
 
                         copyBindings(data[key], value);
                     }
@@ -1030,26 +1004,23 @@
                     /**
                      * Store the new value.
                      */
-                    data[key] = model(value);
+                    data[key] = value;
 
                     /**
                      * Run any bindings to this property.
                      */
-                    if (!disableBindings) {
+                    if (vm._uav[key]) {
 
-                        if (vm._uav[key]) {
+                        vm._uav[key].forEach(function (fn) {
+                            return fn();
+                        });
+                    }
 
-                            vm._uav[key].forEach(function (fn) {
-                                return fn();
-                            });
-                        }
+                    if (vm._loops) {
 
-                        if (vm._loops) {
-
-                            vm._loops.forEach(function (loop) {
-                                return loop.binding(data[key], key);
-                            });
-                        }
+                        vm._loops.forEach(function (loop) {
+                            return loop.binding(data[key], key);
+                        });
                     }
                 }
             }
@@ -1113,7 +1084,7 @@
             app.appendChild(vm._el);
         }
 
-        var _loop = function _loop(i) {
+        var _loop4 = function _loop4(i) {
 
             if (_typeof(_arguments[i], 'function')) {
 
@@ -1126,9 +1097,9 @@
         };
 
         for (var i = 0; i < arguments.length; i++) {
-            var _ret = _loop(i);
+            var _ret4 = _loop4(i);
 
-            if (_ret === 'break') break;
+            if (_ret4 === 'break') break;
         }
 
         return vm;

@@ -1,3 +1,5 @@
+- unit tests
+- comments
 - benchmark
 - consider batch updates / async rendering
 - uav-router

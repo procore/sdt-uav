@@ -1,7 +1,5 @@
 (() => {
 
-    let disableBindings;
-
     /*
      * Array.prototype.from shim for IE
      *
@@ -100,23 +98,21 @@
      * @param  {Function} set - the list's setter descriptor
      * @return {undefined}
      */
-    function bindArrayMethods(list) {
+    function bindArrayMethods(list) { 
         
         defineProp(list, 'push', (...args) => {
 
-            disableBindings = true;
+            const startIndex = list.length;
 
-            Array.prototype.push.apply(list, args);
+            args = args.map(model);
 
-            disableBindings = false;
-
-            list.forEach(list._watch);
+            args.forEach(arg => list._watch(arg, list.length));
 
             list._loops.forEach(loop => {
 
                 args.forEach((arg, i) => {
 
-                    loop.binding(arg, list.length + i);
+                    loop.binding(arg, startIndex + i);
 
                 });
 
@@ -130,37 +126,7 @@
 
             list._loops.forEach(loop => loop.remove(list.length - 1));
 
-            disableBindings = true;
-
-            const result = Array.prototype.pop.call(list);
-
-            disableBindings = false;
-
-            return result;
-
-        });
-
-        defineProp(list, 'reverse', () => {
-
-            list._loops.forEach(loop => {
-
-                const children = Array.from(loop.node.children);
-
-                for (let i = list.length - 1; i >= 0; i--) {
-
-                    loop.node.appendChild(children[i]);
-
-                }
-
-            });
-
-            disableBindings = true;
-
-            Array.prototype.reverse.call(list);
-
-            disableBindings = false;
-
-            return list;
+            return Array.prototype.pop.call(list);
 
         });
 
@@ -168,67 +134,35 @@
 
             list._loops.forEach(loop => loop.remove(0));
 
-            disableBindings = true;
-
             const result = Array.prototype.shift.call(list);
-
-            disableBindings = false;
 
             return result;
 
         });
 
-        defineProp(list, 'sort', sort => {
-
-            const temp = Array.from(list);
-
-            disableBindings = true;
-
-            Array.prototype.sort.call(list, sort);
-
-            disableBindings = false;
-
-            list._loops.forEach(loop => {
-
-                const nodes = [];
-
-                list.forEach(value => nodes.push(loop.node.children[temp.indexOf(value)]));
-
-                nodes.forEach((child, j) => loop.node.insertBefore(child, loop.node.children[j]));
-
-            });
-
-            return list;
-
-        });
-
         defineProp(list, 'splice', (...args) => {
+
+            const originalLength = list.length;
 
             const start = args.shift();
 
             const deleteCount = args.shift();
 
-            disableBindings = true;
+            args = args.map(model);
 
             const result = Array.prototype.splice.apply(list, [start, deleteCount].concat(args));
 
-            disableBindings = false;
+            for (let i = originalLength; i < list.length; i++) {
 
-            list.forEach(list._watch);
+                list._watch(list[i], i);
 
-            if (list._loops) {
+                list._loops.forEach(loop => loop.binding(list[i], i));
 
-                for (let i = 0; i < deleteCount; i++) {
+            }
 
-                    list._loops.forEach(loop => loop.remove(start));
+            for (let i = list.length; i < originalLength; i++) {
 
-                }
-
-                list._loops.forEach(loop => {
-
-                    args.forEach((arg, i) => loop.binding(arg, start + i, true));
-
-                });
+                list._loops.forEach(loop => loop.remove(i));
 
             }
 
@@ -238,19 +172,19 @@
 
         defineProp(list, 'unshift', (...args) => {
 
-            disableBindings = true;
+            const originalLength = list.length;
+
+            args = args.map(model);
 
             Array.prototype.unshift.apply(list, args);
 
-            disableBindings = false;
+            for (let i = originalLength; i < list.length; i++) {
 
-            list.forEach(list._watch);
+                list._watch(list[i], i);
 
-            list._loops.forEach(loop => {
+                list._loops.forEach(loop => loop.binding(list[i], i));
 
-                args.forEach((item, i) => loop.binding(item, i, true));
-
-            });
+            }
 
             return list;
 
@@ -364,7 +298,7 @@
 
         try {
 
-            return new Function(`with(arguments[0]){return ${expression}}`).call(vm, vm);
+            return new Function(`with(arguments[0]){return ${expression}}`)(vm);
 
         } catch (err) {
 
@@ -418,7 +352,7 @@
      * @param  {Object} vm - the view model for the expression
      * @return {undefined}
      */
-    function bind(opts, vm) {
+    function bind(opts, vm, loopMethods) {
 
         const expressions = opts.one ? [opts.tmpl] : opts.tmpl.match(uav.expRX);
 
@@ -442,9 +376,21 @@
 
                     }
 
+                    if (loopMethods) {
+
+                        loopMethods.set(vm);
+
+                    }
+
                     let value = evaluate(code, vm);
 
                     currentBinding = null;
+
+                    if (loopMethods) {
+
+                        loopMethods.reset(vm);
+
+                    }
 
                     if (_typeof(value, 'boolean')) {
 
@@ -551,20 +497,40 @@
 
                     const origIndex = vm[loop.index];
 
-                    vm[loop.as] = item;
+                    const loopMethods = {
 
-                    if (loop.index) {
+                        set(_vm) {
 
-                        vm[loop.index] = i;
+                            _vm[loop.as] = item;
 
-                    }
+                            if (loop.index) {
+
+                                _vm[loop.index] = i;
+
+                            }
+
+                        },
+
+                        reset(_vm) {
+
+                            _vm[loop.as] = origAs;
+
+                            if (loop.index) {
+
+                                _vm[loop.index] = origIndex;
+
+                            }
+
+                        }
+
+                    };
 
                     /**
                      * Insert and bind a new node at the current index
                      */
                     if (insert && childAtIndex) {
 
-                        loop.node.insertBefore(render(child, vm), childAtIndex);
+                        loop.node.insertBefore(render(child, vm, loopMethods), childAtIndex);
 
                     /**
                      * Replace and bind the node at the current index
@@ -573,22 +539,14 @@
 
                         unbind(childAtIndex);
 
-                        loop.node.replaceChild(render(child, vm), childAtIndex);
+                        loop.node.replaceChild(render(child, vm, loopMethods), childAtIndex);
 
                     /**
                      * Append and bind a new node
                      */
                     } else {
 
-                        loop.node.appendChild(render(child, vm));
-
-                    }
-
-                    vm[loop.as] = origAs;
-
-                    if (loop.index) {
-
-                        vm[loop.index] = origIndex;
+                        loop.node.appendChild(render(child, vm, loopMethods));
 
                     }
 
@@ -789,7 +747,7 @@
      * @param  {Object} vm - the current view model
      * @return {Boolean} isLoop - indicates whether the node contains a template loop
      */
-    function bindAttribute(node, attribute, vm) {
+    function bindAttribute(node, attribute, vm, loopMethods) {
 
         let isLoop;
 
@@ -801,7 +759,7 @@
 
                 node.removeAttribute(attribute.name);
 
-                bind(opts, vm);
+                bind(opts, vm, loopMethods);
 
                 if (opts.loop) {
 
@@ -813,7 +771,7 @@
 
         }
 
-        bind(defaultAttributeCheck(node, attribute), vm);
+        bind(defaultAttributeCheck(node, attribute), vm, loopMethods);
 
         return isLoop;
 
@@ -826,7 +784,7 @@
      * @param  {Object} vm - the current view model
      * @return {undefined}
      */
-    function bindTextNode(node, vm) {
+    function bindTextNode(node, vm, loopMethods) {
 
         bind({
             tmpl: node.textContent,
@@ -864,7 +822,7 @@
                 }
 
             }
-        }, vm);
+        }, vm, loopMethods);
 
     }
 
@@ -877,7 +835,7 @@
      * @param  {Object} vm - the current view model
      * @return {undefined}
      */
-    function explodeTextNode(node, vm) {
+    function explodeTextNode(node, vm, loopMethods) {
 
         const parts = node.textContent.split(uav.expRX);
 
@@ -893,7 +851,7 @@
 
                     parent.insertBefore(newNode, node);
 
-                    bindTextNode(newNode, vm);
+                    bindTextNode(newNode, vm, loopMethods);
 
                 }
 
@@ -913,7 +871,7 @@
      * @param  {Object} vm - the current view model
      * @return {Element}
      */
-    function render(node, vm) {
+    function render(node, vm, loopMethods) {
 
         let isLoop;
 
@@ -927,7 +885,7 @@
 
         forEachAttribute(node, attribute => {
 
-            if (bindAttribute(node, attribute, vm)) {
+            if (bindAttribute(node, attribute, vm, loopMethods)) {
 
                 isLoop = true;
 
@@ -945,11 +903,11 @@
 
             if (child.nodeType === 3) {
 
-                explodeTextNode(child, vm); 
+                explodeTextNode(child, vm, loopMethods); 
             
             } else {
 
-                render(child, vm);
+                render(child, vm, loopMethods, loopMethods);
 
             }
 
@@ -1014,7 +972,7 @@
 
         let vm = {};
 
-        if (Array.isArray) {
+        if (Array.isArray(data)) {
 
             vm = [];
 
@@ -1058,9 +1016,13 @@
                      */
                     currentNode._uav.push(() => {
 
-                        const index = vm._uav[key].indexOf(binding);
+                        if (vm._uav[key]) {
 
-                        vm._uav[key].splice(index, 1);
+                            const index = vm._uav[key].indexOf(binding);
+
+                            vm._uav[key].splice(index, 1);
+
+                        }
 
                         binding = null;
 
@@ -1087,10 +1049,14 @@
 
                 if (data[key] !== value || _typeof(value, 'object')) {
 
+                    const alreadyVM = value && value._uav;
+
+                    value = model(value);
+
                     /**
                      * Copy over any bindings from the previous value
                      */
-                    if (data[key] && data[key]._uav) {
+                    if (!alreadyVM && data[key] && data[key]._uav) {
 
                         copyBindings(data[key], value);
 
@@ -1099,24 +1065,20 @@
                     /**
                      * Store the new value.
                      */
-                    data[key] = model(value);
+                    data[key] = value;
 
                     /**
                      * Run any bindings to this property.
                      */
-                    if (!disableBindings) {
+                    if (vm._uav[key]) {
 
-                        if (vm._uav[key]) {
+                        vm._uav[key].forEach(fn => fn());
 
-                            vm._uav[key].forEach(fn => fn());
+                    }
 
-                        }
+                    if (vm._loops) {
 
-                        if (vm._loops) {
-
-                            vm._loops.forEach(loop => loop.binding(data[key], key));
-
-                        }
+                        vm._loops.forEach(loop => loop.binding(data[key], key));
 
                     }
 
