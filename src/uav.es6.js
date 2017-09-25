@@ -275,9 +275,9 @@
 
         el.innerHTML = markup;
 
-        if (el.children.length > 1) {
+        if (el.children.length !== 1) {
 
-            console.error('Only 1 root node allowed.');
+            console.error('Template must have 1 root node:', markup);
 
         }
 
@@ -487,7 +487,7 @@
                     }
 
                 },
-                binding: (item, i, insert) => {
+                binding: (item, i) => {
 
                     const childAtIndex = loop.node.children[i];
 
@@ -525,17 +525,7 @@
 
                     };
 
-                    /**
-                     * Insert and bind a new node at the current index
-                     */
-                    if (insert && childAtIndex) {
-
-                        loop.node.insertBefore(render(child, vm, loopMethods), childAtIndex);
-
-                    /**
-                     * Replace and bind the node at the current index
-                     */
-                    } else if (childAtIndex) {
+                    if (childAtIndex) {
 
                         unbind(childAtIndex);
 

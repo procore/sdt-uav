@@ -4,7 +4,8 @@
   "description": "Simple is good",
   "main": "dist/uav.js",
   "scripts": {
-    "build": ". build.sh"
+    "build": ". build.sh",
+    "test": "karma start"
   },
   "repository": {
     "type": "git",
@@ -46,6 +47,10 @@
     "babel-plugin-transform-es2015-template-literals": "^6.22.0",
     "babel-plugin-transform-es2015-unicode-regex": "^6.24.1",
     "babel-plugin-transform-regenerator": "^6.26.0",
+    "jasmine-core": "^2.8.0",
+    "karma": "^1.7.1",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-jasmine": "^1.1.0",
     "uglify-js": "^3.1.0"
   },
   "babel": {
