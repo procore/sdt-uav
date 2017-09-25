@@ -132,7 +132,7 @@
 
         const template = attribute.value;
 
-        function binding(vm, state) {
+        const binding = el => (vm, state) => {
 
             let result = template;
 
@@ -142,7 +142,7 @@
 
                 if (_typeof(value, 'function')) {
 
-                    state.el[attribute.name] = value;
+                    el[attribute.name] = value;
 
                     return;
 
@@ -156,13 +156,13 @@
 
             }
 
-            state.el.setAttribute(attribute.name, result);
+            el.setAttribute(attribute.name, result);
 
-        }
+        };
 
         steps.push(step => {
 
-            return bindStep(binding, step);
+            return bindStep(binding(step.el), step);
 
         });
 
