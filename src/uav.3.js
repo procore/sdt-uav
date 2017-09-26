@@ -1,575 +1,562 @@
-(() => {
+import util from './util';
+import uav from './uav';
 
-    let currentBinding;
+let currentBinding;
 
-    let currentNode;
+let currentNode;
 
-    const _typeof = (val, type) => typeof val === type;
+function all(selector, callback) {
 
-    // TODO: support svg
-    const createElement = tag => document.createElement(tag);
+    const els = Array.from(document.querySelectorAll(selector));
 
-    const defineProp = (vm, prop, value) => Object.defineProperty(vm, prop, {
-        value,
-        configurable: true,
-        writable: true,
-        enumerable: false
-    });
-    
-    function all(selector, callback) {
+    if (callback) {
 
-        const els = Array.from(document.querySelectorAll(selector));
-
-        if (callback) {
-
-            return els.forEach(callback);
-
-        }
-
-        return els;
+        return els.forEach(callback);
 
     }
 
-    const uav = window.uav = (selector, callback) => {
+    return els;
 
-        if (callback) {
+}
 
-            return all(selector, callback);
+const uav = window.uav = (selector, callback) => {
+
+    if (callback) {
+
+        return all(selector, callback);
+
+    }
+
+    return document.querySelector(selector) || document.createElement('div');
+
+};
+
+function setTag(open, close) {
+
+    uav.tagRX = new RegExp(`(^${open}|${close}$)`, 'g');
+
+    uav.expRX =  new RegExp(`(${open}.*?${close})`, 'g');
+
+}
+
+setTag('{', '}');
+
+function unbind(node) {
+
+    if (node && node._uav) {
+
+        Array.from(node.children).forEach(unbind);
+
+        node._uav.forEach(fn => fn());
+
+        node = null;
+
+    }
+
+}
+
+function expressionToEvaluator(expression) {
+
+    const evaluator = new Function(`with(arguments[0]){with(arguments[1]){return ${expression}}}`);
+
+    return (vm, ctx) => {
+
+        let result;
+
+        try {
+
+            result = evaluator(vm, ctx || {});
+
+        } catch (err) {
+
+            console.error(expression, err);
+
+            result = '';
 
         }
 
-        return document.querySelector(selector) || createElement('div');
+        return result;
 
     };
 
-    function setTag(open, close) {
+}
 
-        uav.tagRX = new RegExp(`(^${open}|${close}$)`, 'g');
+function parse(markup, parent) {
 
-        uav.expRX =  new RegExp(`(${open}.*?${close})`, 'g');
+    const el = parent ? parent.cloneNode() : document.createElement('div');
 
-    }
+    el.innerHTML = markup;
 
-    setTag('{', '}');
+    if (el.children.length !== 1) {
 
-    function unbind(node) {
-
-        if (node && node._uav) {
-
-            Array.from(node.children).forEach(unbind);
-
-            node._uav.forEach(fn => fn());
-
-            node = null;
-
-        }
+        console.error('Template must have 1 root node:', markup);
 
     }
 
-    function expressionToEvaluator(expression) {
+    return el.firstElementChild;
 
-        const evaluator = new Function(`with(arguments[0]){with(arguments[1]){return ${expression}}}`);
+}
 
-        return (vm, ctx) => {
+const stripTags = str => str.replace(uav.tagRX, '');
 
-            let result;
+function bindStep(binding, step) {
 
-            try {
+    currentBinding = binding;
 
-                result = evaluator(vm, ctx || {});
+    binding.ctx = step.ctx;
 
-            } catch (err) {
+    binding(step.vm, step);
 
-                console.error(expression, err);
+    currentBinding = null;
 
-                result = '';
+    return step;
+
+}
+
+function bindAttribute(attribute, expressions, steps) {
+
+    const codes = expressions.map(stripTags);
+
+    const evaluators = codes.map(expressionToEvaluator);
+
+    const template = attribute.value;
+
+    const binding = el => (vm, state) => {
+
+        let result = template;
+
+        for (let i = 0; i < evaluators.length; i++) {
+
+            let value = evaluators[i](vm, state.ctx);
+
+            if (typeof value === 'function') {
+
+                el[attribute.name] = value;
+
+                return;
+
+            } else if (typeof value === 'boolean') {
+
+                value = value ? codes[i] : '';
 
             }
 
-            return result;
-
-        };
-
-    }
-
-    function parse(markup, parent) {
-
-        const el = parent ? parent.cloneNode() : createElement('div');
-
-        el.innerHTML = markup;
-
-        if (el.children.length !== 1) {
-
-            console.error('Template must have 1 root node:', markup);
+            result = result.replace(expressions[i], value);
 
         }
 
-        return el.firstElementChild;
+        el.setAttribute(attribute.name, result);
 
-    }
+    };
 
-    const stripTags = str => str.replace(uav.tagRX, '');
+    steps.push(state => {
 
-    function bindStep(binding, step) {
+        return bindStep(binding(state.el), state);
 
-        currentBinding = binding;
+    });
 
-        binding.ctx = step.ctx;
+}
 
-        binding(step.vm, step);
+function bindLoop(attribute, steps, node) {
 
-        currentBinding = null;
+    const evaluate = expressionToEvaluator(attribute.value);
 
-        return step;
+    const loopVars = node.getAttribute('uav-as').split(',');
 
-    }
+    const as = loopVars[0];
 
-    function bindAttribute(attribute, expressions, steps) {
+    const index = loopVars[1];
 
-        const codes = expressions.map(stripTags);
+    node.removeAttribute('uav-loop');
 
-        const evaluators = codes.map(expressionToEvaluator);
+    node.removeAttribute('uav-as');
 
-        const template = attribute.value;
+    const childSteps = getSteps(node.firstElementChild);
 
-        const binding = el => (vm, state) => {
+    node.innerHTML = '';
 
-            let result = template;
+    const binding = el => (vm, state) => {
 
-            for (let i = 0; i < evaluators.length; i++) {
-
-                let value = evaluators[i](vm, state.ctx);
-
-                if (_typeof(value, 'function')) {
-
-                    el[attribute.name] = value;
-
-                    return;
-
-                } else if (_typeof(value, 'boolean')) {
-
-                    value = value ? codes[i] : '';
-
-                }
-
-                result = result.replace(expressions[i], value);
-
-            }
-
-            el.setAttribute(attribute.name, result);
-
-        };
-
-        steps.push(step => {
-
-            return bindStep(binding(step.el), step);
-
-        });
-
-    }
-
-    function bindLoop(attribute, steps, node) {
-
-        const evaluate = expressionToEvaluator(attribute.value);
-
-        const loopVars = node.getAttribute('uav-as').split(',');
-
-        const as = loopVars[0];
-
-        const index = loopVars[1];
-
-        node.removeAttribute('uav-loop');
-
-        node.removeAttribute('uav-as');
-
-        const childSteps = getSteps(node.firstElementChild);
-
-        node.innerHTML = '';
-
-        const binding = el => (vm, state) => {
-
-            const loop = {
-                
-                append(item, i) {
-
-                    const child = render(childSteps, vm, {
-                        [as]: item,
-                        [index]: i
-                    });
-
-                    el.appendChild(child);
-
-                },
-
-                replace(item, i) {
-
-                    const childAtIndex = el.children[i];
-
-                    const child = render(childSteps, vm, {
-                        [as]: item,
-                        [index]: i
-                    });
-
-                    if (childAtIndex) {
-
-                        el.replaceChild(child, childAtIndex);
-
-                    } else {
-
-                        el.appendChild(child);
-
-                    }
-
-                }
-
-            };
-
-            el.innerHTML = '';
-
-            const list = model(evaluate(vm, state.ctx) || []);
-
-            list._loops.push(loop);
-
-            currentBinding = null;
-
-            list.forEach(loop.append);
-
-        };
-
-        steps.push(step => {
-
-            currentBinding = binding(step.el);
-
-            currentBinding.ctx = step.ctx;
-
-            currentBinding(step.vm, step);
-
-            return step;
-
-        });
-
-    }
-
-    function parseAttribute(attribute, steps, node) {
-
-        if (attribute.name === 'uav-loop') {
-
-            bindLoop(attribute, steps, node);
-
-        } else {
-
-            const expressions = attribute.value.match(uav.expRX);
-
-            if (expressions) {
-
-                bindAttribute(attribute, expressions, steps);
-
-            } else {
-
-                steps.push(step => {
-
-                    step.el.setAttribute(attribute.name, attribute.value);
-
-                    return step;
-
-                });
-
-            }
-
-        }
-
-    }
-
-    function bindTextNode(_node, steps, expression) {
-
-        const evaluate = expressionToEvaluator(expression);
-
-        const binding = node => (vm, state) => {
-
-            const value = evaluate(vm, state.ctx);
-
-            if (value._el || value.tagName) {
-
-                const newNode = value._el ? value._el : value;
-
-                if (newNode !== node) {
-
-                    unbind(node);
-
-                }
-
-                if (node.parentNode) {
-
-                    node.parentNode.replaceChild(newNode, node);
-
-                    node = newNode;
-
-                }
-
-            } else {
-
-                node.textContent = value;
-
-            }
-
-        };
-
-        steps.push(step => {
-
-            const node = document.createTextNode('');
-
-            step.el.appendChild(node);
-
-            return bindStep(binding(node), step);
-
-        });
-
-    }
-
-    function parseTextNode(node, steps) {
-
-        const parts = node.textContent.split(uav.expRX);
-
-        if (parts.length > 1) {
-
-            const parent = node.parentNode;
-
-            parts.forEach(part => {
-
-                if (part.trim()) {
-
-                    const newNode = document.createTextNode(part);
-
-                    if (part.match(uav.expRX)) {
-
-                        bindTextNode(newNode, steps, stripTags(part));
-
-                    } else {
-
-                        steps.push(step => {
-
-                            step.el.appendChild(newNode);
-
-                            return step;
-
-                        });
-
-                    }
-
-                }
-
-            });
-
-            parent.removeChild(node);
-
-        } else {
-
-            steps.push(step => {
-
-                step.el.appendChild(node.cloneNode());
-
-                return step;
-
-            });
-
-        }
-
-    }
-
-    function render(steps, vm, ctx) {
-
-        return [{vm, ctx, el: steps.root()}]
-            .concat(steps)
-            .reduce((a, b) => b(a)).el;
-
-    }
-
-    function getSteps(node) {
-
-        currentNode = node;
-
-        defineProp(currentNode, '_uav', []);
-
-        const steps = [];
-
-        steps.root = () => createElement(node.tagName, node.parentNode);
-
-        Array.from(node.attributes).forEach(attribute => parseAttribute(attribute, steps, node));
-        
-        Array.from(node.childNodes).forEach(child => {
-
-            if (child.nodeType === 3) {
-
-                parseTextNode(child, steps); 
+        const loop = {
             
-            } else {
+            append(item, i) {
 
-                const childSteps = getSteps(child);
-
-                steps.push(step => {
-
-                    step.el.appendChild(render(childSteps, step.vm, step.ctx));
-
-                    return step;
-
+                const child = render(childSteps, vm, {
+                    [as]: item,
+                    [index]: i
                 });
 
-            }
+                el.appendChild(child);
 
-        });
+            },
 
-        return steps;
+            replace(item, i) {
 
-    }
+                const childAtIndex = el.children[i];
 
-    function isVmEligible(data) {
+                const child = render(childSteps, vm, {
+                    [as]: item,
+                    [index]: i
+                });
 
-        return !(!data || typeof data !== 'object' || data._uav || data.tagName);
+                if (childAtIndex) {
 
-    }
-
-    function model(data) {
-
-        if (!isVmEligible(data)) {
-
-            return data;
-
-        }
-
-        let vm = {};
-
-        if (Array.isArray(data)) {
-
-            vm = [];
-
-            defineProp(vm, '_loops', []);
-
-        } else {
-
-            defineProp(vm, '_uav', {});
-
-        }
-
-        Object.keys(data).forEach(key => {
-
-            function get() {
-
-                if (currentBinding && vm._uav) {
-
-                    let binding = currentBinding;
-
-                    // binding.el = currentNode;
-
-                    vm._uav[key] = vm._uav[key] || [];
-
-                    vm._uav[key].push(binding);
-
-                    currentNode._uav.push(() => {
-
-                        if (vm._uav[key]) {
-
-                            const index = vm._uav[key].indexOf(binding);
-
-                            vm._uav[key].splice(index, 1);
-
-                        }
-
-                        binding = null;
-
-                    });
-
-                }
-
-                uav.lastAccessed = {vm, key};
-
-                return data[key];
-
-            }
-
-            function set(value) {
-
-                data[key] = model(value);
-
-                if (vm._loops) {
-
-                    vm._loops.forEach(loop => loop.replace(data[key], key));
-
-                } else if (vm._uav[key]) {
-
-                    vm._uav[key].forEach(binding => binding(vm, binding));
-
-                }
-
-            }
-
-            data[key] = model(data[key]);
-
-            Object.defineProperty(vm, key, {
-                get,
-                set,
-                configurable: true,
-                enumerable: true
-            });
-
-        });
-
-        return vm;
-
-    }
-    
-    function component(template) {
-
-        const node = template.tagName ? template : parse(template);
-
-        const steps = getSteps(node);
-
-        return (vm, selector) => {
-
-            vm = model(vm);
-
-            const el = render(steps, vm);
-
-            if (selector) {
-
-                if (typeof selector === 'string') {
-
-                    const parent = uav(selector);
-
-                    parent.innerHTML = '';
-
-                    parent.appendChild(el);
+                    el.replaceChild(child, childAtIndex);
 
                 } else {
 
-                    selector.appendChild(el);
-
-                }
-
-            } else {
-
-                vm._el = el;
-
-            }
-
-            for (let i = 1; i < arguments.length; i++) {
-            
-                if (_typeof(arguments[i], 'function')) {
-
-                    setTimeout(() => arguments[i](el));
-
-                    break;
+                    el.appendChild(child);
 
                 }
 
             }
-
-            return vm;
 
         };
 
+        el.innerHTML = '';
+
+        const list = model(evaluate(vm, state.ctx) || []);
+
+        list._loops.push(loop);
+
+        currentBinding = null;
+
+        list.forEach(loop.append);
+
+    };
+
+    steps.push(state => {
+
+        currentBinding = binding(state.el);
+
+        currentBinding.ctx = state.ctx;
+
+        currentBinding(state.vm, state);
+
+        return state;
+
+    });
+
+}
+
+function parseAttribute(attribute, steps, node) {
+
+    if (attribute.name === 'uav-loop') {
+
+        bindLoop(attribute, steps, node);
+
+    } else {
+
+        const expressions = attribute.value.match(uav.expRX);
+
+        if (expressions) {
+
+            bindAttribute(attribute, expressions, steps);
+
+        } else {
+
+            steps.push(state => {
+
+                state.el.setAttribute(attribute.name, attribute.value);
+
+                return state;
+
+            });
+
+        }
+
     }
 
-    uav.parse = parse;
-    uav.component = component;
+}
 
-})();
+function bindTextNode(_node, steps, expression) {
+
+    const evaluate = expressionToEvaluator(expression);
+
+    const binding = node => (vm, state) => {
+
+        const value = evaluate(vm, state.ctx);
+
+        if (value._el || value.tagName) {
+
+            const newNode = value._el ? value._el : value;
+
+            if (newNode !== node) {
+
+                unbind(node);
+
+            }
+
+            if (node.parentNode) {
+
+                node.parentNode.replaceChild(newNode, node);
+
+                node = newNode;
+
+            }
+
+        } else {
+
+            node.textContent = value;
+
+        }
+
+    };
+
+    steps.push(state => {
+
+        const node = document.createTextNode('');
+
+        state.el.appendChild(node);
+
+        return bindStep(binding(node), state);
+
+    });
+
+}
+
+function parseTextNode(node, steps) {
+
+    const parts = node.textContent.split(uav.expRX);
+
+    if (parts.length > 1) {
+
+        const parent = node.parentNode;
+
+        parts.forEach(part => {
+
+            if (part.trim()) {
+
+                const newNode = document.createTextNode(part);
+
+                if (part.match(uav.expRX)) {
+
+                    bindTextNode(newNode, steps, stripTags(part));
+
+                } else {
+
+                    steps.push(state => {
+
+                        state.el.appendChild(newNode);
+
+                        return state;
+
+                    });
+
+                }
+
+            }
+
+        });
+
+        parent.removeChild(node);
+
+    } else {
+
+        steps.push(state => {
+
+            state.el.appendChild(node.cloneNode());
+
+            return state;
+
+        });
+
+    }
+
+}
+
+function render(steps, vm, ctx) {
+
+    return [{vm, ctx, el: steps.root()}]
+        .concat(steps)
+        .reduce((a, b) => b(a)).el;
+
+}
+
+function getSteps(node) {
+
+    currentNode = node;
+
+    util.defineProp(currentNode, '_uav', []);
+
+    const steps = [];
+
+    steps.root = () => document.createElement(node.tagName, node.parentNode);
+
+    Array.from(node.attributes).forEach(attribute => parseAttribute(attribute, steps, node));
+    
+    Array.from(node.childNodes).forEach(child => {
+
+        if (child.nodeType === 3) {
+
+            parseTextNode(child, steps); 
+        
+        } else {
+
+            const childSteps = getSteps(child);
+
+            steps.push(state => {
+
+                state.el.appendChild(render(childSteps, state.vm, state.ctx));
+
+                return state;
+
+            });
+
+        }
+
+    });
+
+    return steps;
+
+}
+
+function isVmEligible(data) {
+
+    return !(!data || typeof data !== 'object' || data._uav || data.tagName);
+
+}
+
+function model(data) {
+
+    if (!isVmEligible(data)) {
+
+        return data;
+
+    }
+
+    let vm = {};
+
+    if (Array.isArray(data)) {
+
+        vm = [];
+
+        util.defineProp(vm, '_loops', []);
+
+    } else {
+
+        util.defineProp(vm, '_uav', {});
+
+    }
+
+    Object.keys(data).forEach(key => {
+
+        function get() {
+
+            if (currentBinding && vm._uav) {
+
+                let binding = currentBinding;
+
+                // binding.el = currentNode;
+
+                vm._uav[key] = vm._uav[key] || [];
+
+                vm._uav[key].push(binding);
+
+                currentNode._uav.push(() => {
+
+                    if (vm._uav[key]) {
+
+                        const index = vm._uav[key].indexOf(binding);
+
+                        vm._uav[key].splice(index, 1);
+
+                    }
+
+                    binding = null;
+
+                });
+
+            }
+
+            uav.lastAccessed = {vm, key};
+
+            return data[key];
+
+        }
+
+        function set(value) {
+
+            data[key] = model(value);
+
+            if (vm._loops) {
+
+                vm._loops.forEach(loop => loop.replace(data[key], key));
+
+            } else if (vm._uav[key]) {
+
+                vm._uav[key].forEach(binding => binding(vm, binding));
+
+            }
+
+        }
+
+        data[key] = model(data[key]);
+
+        Object.defineProperty(vm, key, {
+            get,
+            set,
+            configurable: true,
+            enumerable: true
+        });
+
+    });
+
+    return vm;
+
+}
+
+function component(template) {
+
+    const node = template.tagName ? template : parse(template);
+
+    const steps = getSteps(node);
+
+    return (vm, selector) => {
+
+        vm = model(vm);
+
+        const el = render(steps, vm);
+
+        if (selector) {
+
+            if (typeof selector === 'string') {
+
+                const parent = uav(selector);
+
+                parent.innerHTML = '';
+
+                parent.appendChild(el);
+
+            } else {
+
+                selector.appendChild(el);
+
+            }
+
+        } else {
+
+            vm._el = el;
+
+        }
+
+        for (let i = 1; i < arguments.length; i++) {
+        
+            if (typeof arguments[i] === 'function') {
+
+                setTimeout(() => arguments[i](el));
+
+                break;
+
+            }
+
+        }
+
+        return vm;
+
+    };
+
+}
+
+uav.parse = parse;
+uav.component = component;

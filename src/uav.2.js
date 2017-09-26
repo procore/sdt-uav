@@ -246,7 +246,55 @@
 
     }
 
-    function parseAttribute(attribute, vm) {
+    function bindLoop(attribute, vm, node) {
+
+        const evaluate = parseExpression(attribute.value);
+
+        const as = node.getAttribute('uav-as');
+
+        const template = parse(node.innerHTML);
+
+        node.removeAttribute('uav-loop');
+
+        node.removeAttribute('uav-as');
+
+        node.innerHTML = '';
+
+        function getRow(data) {
+
+            
+
+        }
+
+        binding = () => {
+
+            let list;
+
+            try {
+
+                list = evaluate(vm);
+
+            } catch (err) {
+
+                list = [];
+
+            }
+
+
+
+        };
+
+        binding = null;
+
+    }
+
+    function parseAttribute(attribute, vm, node) {
+
+        if (attribute.name === 'uav-loop') {
+
+            bindLoop(attribute, vm, node);
+
+        }
 
         const expressions = attribute.value.match(uav.expRX);
 
@@ -260,7 +308,7 @@
 
     function walk(node, vm) {
 
-        Array.from(node.attributes).forEach(attribute => parseAttribute(attribute, vm));
+        Array.from(node.attributes).forEach(attribute => parseAttribute(attribute, vm, node));
 
         Array.from(node.childNodes).forEach(child => {
 

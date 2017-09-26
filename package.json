@@ -4,6 +4,7 @@
   "description": "Simple is good",
   "main": "dist/uav.js",
   "scripts": {
+    "watch": "rollup src/index.js -o dist/uav.js -w -f iife",
     "build": ". build.sh",
     "test": "karma start"
   },
@@ -51,6 +52,7 @@
     "karma": "^1.7.1",
     "karma-chrome-launcher": "^2.2.0",
     "karma-jasmine": "^1.1.0",
+    "rollup": "^0.50.0",
     "uglify-js": "^3.1.0"
   },
   "babel": {
