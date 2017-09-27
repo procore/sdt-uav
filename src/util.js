@@ -33,17 +33,17 @@ const util = {
 
     stripTags: str => str.replace(uav.tagRX, ''),
 
-    bindStep(binding, step) {
+    bindStep(binding, state) {
 
-        uav.binding = binding;
+        state.binding = binding;
 
-        binding.ctx = step.ctx;
+        uav.state = state;
 
-        binding(step.vm, step);
+        binding(state);
 
-        uav.binding = null;
+        uav.state = null;
 
-        return step;
+        return state;
 
     },
 
@@ -64,6 +64,18 @@ const util = {
     isVmEligible(data) {
 
         return !(!data || typeof data !== 'object' || data._uav || data.tagName);
+
+    },
+
+    createElement(tag) {
+
+        if (tag === 'svg' || tag === 'path') {
+
+            return document.createElementNS('http://www.w3.org/2000/svg', tag);
+
+        }
+
+        return document.createElement(tag);
 
     }
 

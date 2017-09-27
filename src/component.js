@@ -1,40 +1,36 @@
-import parse from './parse';
-import element from './element';
+import parseHtml from './parse/html';
+import parseElement from './parse/element';
 import model from './model';
 import util from './util';
 import uav from './uav';
 
-export default template => {
+export default html => {
 
-    const node = template.tagName ? template : parse.html(template);
+    const node = html.tagName ? html : parseHtml(html);
 
-    const steps = element.parse(node);
+    const steps = parseElement(node);
 
-    return (vm, selector) => {
+    return function(vm, parent) {
 
         vm = model(vm);
 
-        const el = util.render(steps, vm);
+        vm._el = util.render(steps, vm);
 
-        if (selector) {
+        if (parent) {
 
-            if (typeof selector === 'string') {
+            if (typeof parent === 'string') {
 
-                const parent = uav(selector);
+                parent = uav(parent);
 
                 parent.innerHTML = '';
 
-                parent.appendChild(el);
-
-            } else {
-
-                selector.appendChild(el);
-
             }
 
-        } else {
+            if (parent.appendChild) {
 
-            vm._el = el;
+                parent.appendChild(vm._el);
+
+            }
 
         }
 
@@ -42,7 +38,7 @@ export default template => {
         
             if (typeof arguments[i] === 'function') {
 
-                setTimeout(() => arguments[i](el));
+                setTimeout(() => arguments[i](vm._el));
 
                 break;
 

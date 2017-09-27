@@ -12,7 +12,7 @@ function all(selector, callback) {
 
 }
 
-const uav = window.uav = (selector, callback) => {
+function uav(selector, callback) {
 
     if (callback) {
 
@@ -22,6 +22,8 @@ const uav = window.uav = (selector, callback) => {
 
     return document.querySelector(selector) || document.createElement('div');
 
-};
+}
+
+uav.all = all;
 
 export default uav;

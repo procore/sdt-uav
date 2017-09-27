@@ -20,9 +20,17 @@ describe('uav', () => {
 
     });
 
-    it('should render a string-only component', () => {
+    it('should render a component given a selector', () => {
 
-        uav.component('<div id="foo"></div>', '#app');
+        uav.component('<div id="foo"></div>')({}, '#app');
+
+        expect(uav('#app').firstElementChild.id).toBe('foo');
+
+    });
+
+    it('should render a component given a node', () => {
+
+        uav.component('<div id="foo"></div>')({}, document.querySelector('#app'));
 
         expect(uav('#app').firstElementChild.id).toBe('foo');
 
@@ -30,9 +38,9 @@ describe('uav', () => {
 
     it('should bind a message', () => {
 
-        const component = uav.component({
+        const component = uav.component('<div>{message}</div>')({
             message: 'foo'
-        }, '<div>{message}</div>');
+        });
 
         expect(component._el.textContent).toBe('foo');
 
@@ -44,7 +52,7 @@ describe('uav', () => {
 
     it('should have a render callback', done => {
 
-        uav.component('<div id="foo"></div>', el => {
+        uav.component('<div id="foo"></div>')({}, el => {
 
             expect(el.tagName).toBe('DIV');
 
@@ -58,9 +66,9 @@ describe('uav', () => {
 
         uav.setTag('{{', '}}');
 
-        const component = uav.component({
+        const component = uav.component('<div>{{message}}</div>')({
             message: 'foo'
-        }, '<div>{{message}}</div>');
+        });
 
         expect(component._el.textContent).toBe('foo');
 
@@ -70,9 +78,9 @@ describe('uav', () => {
 
     it('should support string attribute expressions', () => {
 
-        const component = uav.component({
+        const component = uav.component('<div u-class="{klass}"></div>')({
             klass: 'foo'
-        }, '<div class="{klass}"></div>');
+        });
 
         expect(component._el.classList.contains('foo')).toBe(true);
 
@@ -84,9 +92,9 @@ describe('uav', () => {
 
     it('should support boolean attribute expressions', () => {
 
-        const component = uav.component({
+        const component = uav.component('<div u-class="{foo}"></div>')({
             foo: true
-        }, '<div class="{foo}"></div>');
+        });
 
         expect(component._el.classList.contains('foo')).toBe(true);
 
@@ -98,12 +106,12 @@ describe('uav', () => {
 
     it('should support loops', () => {
 
-        const component = uav.component({
-            list: [1, 2, 3]
-        }, `
-        <ul uav-loop="list" uav-as="item,index">
+        const component = uav.component(`
+        <ul u-loop="list" u-as="item,index">
             <li>{index}: {item}</li>
-        </ul>`);
+        </ul>`)({
+            list: [1, 2, 3]
+        });
 
         const secondItem = component._el.firstElementChild.nextElementSibling;
 
@@ -119,14 +127,121 @@ describe('uav', () => {
 
     });
 
+    it('should support nested loops', () => {
+
+        const component = uav.component(`
+        <div u-loop="list" u-as="item,index">
+            <div u-loop="item" u-as="it,i">
+                <span>{i}:{it}</span>
+            </div>
+        </div>`)({
+            list: [[0]]
+        });
+
+        expect(component._el.outerHTML).toBe('<div><div><span>0:0</span></div></div>');
+
+        component.list[0][0] = 'foo';
+
+        expect(component._el.outerHTML).toBe('<div><div><span>0:foo</span></div></div>');
+
+    });
+
+    it('should support events', () => {
+
+        let event;
+
+        const component = uav.component('<div onclick="{click}"></div>')({
+            click: e => {
+                event = e;
+            }
+        });
+
+        component._el.click();
+
+        expect(event.pageX).toBe(0);
+
+    });
+
+    it('should support passing data to events', () => {
+
+        let event;
+
+        const component = uav.component('<div onclick="{click(`foo`)}"></div>')({
+            click: data => () => {
+                event = data;
+            }
+        });
+
+        component._el.click();
+
+        expect(event).toBe('foo');
+
+    });
+
+    it('should support changing event handlers', () => {
+
+        let event;
+
+        const component = uav.component('<div onclick="{click}"></div>')({
+            click: e => {
+                event = e;
+            }
+        });
+
+        component.click = () => {
+            event = 'foo';
+        };
+
+        component._el.click();
+
+        expect(event).toBe('foo');
+
+    });
+
+    it('should support child components', () => {
+
+        const child = uav.component('<div></div>')({});
+
+        const parent = uav.component('<div>{child}</div>')({child});
+
+        expect(parent._el.firstElementChild.tagName).toBe('DIV');
+
+    });
+
+    it('should support binding html', () => {
+
+        const component = uav.component('<div>{html}</div>')({
+            html: uav.parse('<i></i>')
+        });
+
+        expect(component._el.firstElementChild.tagName).toBe('I');
+
+    });
+
+    it('should support boolean attributes', () => {
+
+        const component = uav.component('<input u-attr="{disabled}"/>')({disabled: true});
+
+        expect(component._el.getAttribute('disabled')).toBe('');
+
+        component.disabled = false;
+
+        expect(component._el.getAttribute('disabled')).toBe(null);
+
+        component.disabled = 'disabled';
+
+        expect(component._el.getAttribute('disabled')).toBe('');
+
+    });
+
     it('should support array.push', () => {
 
-        const component = uav.component({
-            list: [1]
-        }, `
-        <ul uav-loop="list" uav-as="item,index">
+        const component = uav.component(`
+        <ul u-loop="list" u-as="item,index">
             <li>{index}: {item}</li>
-        </ul>`);
+        </ul>`)({
+            list: [1]
+        });
 
         const firstItem = component._el.firstElementChild;
 
@@ -144,12 +259,12 @@ describe('uav', () => {
 
     it('should support array.pop', () => {
 
-        const component = uav.component({
-            list: [1, 2]
-        }, `
-        <ul uav-loop="list" uav-as="item,index">
+        const component = uav.component(`
+        <ul u-loop="list" u-as="item,index">
             <li>{index}: {item}</li>
-        </ul>`);
+        </ul>`)({
+            list: [1, 2]
+        });
 
         const firstItem = component._el.firstElementChild;
 
@@ -165,12 +280,12 @@ describe('uav', () => {
 
     it('should support array.shift', () => {
 
-        const component = uav.component({
-            list: [1, 2]
-        }, `
-        <ul uav-loop="list" uav-as="item,index">
+        const component = uav.component(`
+        <ul u-loop="list" u-as="item,index">
             <li>{index}: {item}</li>
-        </ul>`);
+        </ul>`)({
+            list: [1, 2]
+        });
 
         const result = component.list.shift();
 
@@ -182,12 +297,12 @@ describe('uav', () => {
 
     it('should support array.splice deletion', () => {
 
-        const component = uav.component({
-            list: [1, 2]
-        }, `
-        <ul uav-loop="list" uav-as="item,index">
+        const component = uav.component(`
+        <ul u-loop="list" u-as="item,index">
             <li>{index}: {item}</li>
-        </ul>`);
+        </ul>`)({
+            list: [1, 2]
+        });
 
         const result = component.list.splice(0, 1);
 
@@ -199,12 +314,12 @@ describe('uav', () => {
 
     it('should support array.splice addition', () => {
 
-        const component = uav.component({
-            list: [1]
-        }, `
-        <ul uav-loop="list" uav-as="item,index">
+        const component = uav.component(`
+        <ul u-loop="list" u-as="item,index">
             <li>{index}: {item}</li>
-        </ul>`);
+        </ul>`)({
+            list: [1]
+        });
 
         const result = component.list.splice(1, 0, 2, 3);
 
@@ -220,12 +335,12 @@ describe('uav', () => {
 
     it('should support array.unshift', () => {
 
-        const component = uav.component({
-            list: [1]
-        }, `
-        <ul uav-loop="list" uav-as="item,index">
+        const component = uav.component(`
+        <ul u-loop="list" u-as="item,index">
             <li>{index}: {item}</li>
-        </ul>`);
+        </ul>`)({
+            list: [1]
+        });
 
         component.list.unshift(0);
 
@@ -239,12 +354,12 @@ describe('uav', () => {
 
     it('should support array.reverse', () => {
 
-        const component = uav.component({
-            list: [1, 2]
-        }, `
-        <ul uav-loop="list" uav-as="item,index">
+        const component = uav.component(`
+        <ul u-loop="list" u-as="item,index">
             <li>{index}: {item}</li>
-        </ul>`);
+        </ul>`)({
+            list: [1, 2]
+        });
 
         component.list.reverse();
 
@@ -254,147 +369,16 @@ describe('uav', () => {
 
     it('should support array.sort', () => {
 
-        const component = uav.component({
-            list: [1, 2]
-        }, `
-        <ul uav-loop="list" uav-as="item,index">
+        const component = uav.component(`
+        <ul u-loop="list" u-as="item,index">
             <li>{index}: {item}</li>
-        </ul>`);
+        </ul>`)({
+            list: [1, 2]
+        });
 
         component.list.sort((a, b) => b - a);
 
         expect(component._el.outerHTML).toBe('<ul><li>0: 2</li><li>1: 1</li></ul>');
-
-    });
-
-    it('should support nested loops', () => {
-
-        const component = uav.component({
-            list: [[0]]
-        }, `
-        <div uav-loop="list" uav-as="item,index">
-            <div uav-loop="item" uav-as="it,i">
-                <span>{i}:{it}</span>
-            </div>
-        </div>`);
-
-        expect(component._el.outerHTML).toBe('<div><div><span>0:0</span></div></div>');
-
-        component.list[0][0] = 'foo';
-
-        expect(component._el.outerHTML).toBe('<div><div><span>0:foo</span></div></div>');
-
-    });
-
-    it('should support events', () => {
-
-        let event;
-
-        const component = uav.component({
-            click: e => {
-                event = e;
-            }
-        }, '<div onclick="{click}"></div>');
-
-        component._el.click();
-
-        expect(event.pageX).toBe(0);
-
-    });
-
-    it('should support passing data to events', () => {
-
-        let event;
-
-        const component = uav.component({
-            click: data => () => {
-                event = data;
-            }
-        }, '<div onclick="{click(`foo`)}"></div>');
-
-        component._el.click();
-
-        expect(event).toBe('foo');
-
-    });
-
-    it('should support changing event handlers', () => {
-
-        let event;
-
-        const component = uav.component({
-            click: e => {
-                event = e;
-            }
-        }, '<div onclick="{click}"></div>');
-
-        component.click = () => {
-            event = 'foo';
-        };
-
-        component._el.click();
-
-        expect(event).toBe('foo');
-
-    });
-
-    it('should support child components', () => {
-
-        const child = uav.component('<div></div>');
-
-        const parent = uav.component({child}, '<div>{child}</div>');
-
-        expect(parent._el.firstElementChild.tagName).toBe('DIV');
-
-    });
-
-    it('should support binding html', () => {
-
-        const component = uav.component({
-            html: uav.parse('<i></i>')
-        }, '<div>{html}</div>');
-
-        expect(component._el.firstElementChild.tagName).toBe('I');
-
-    });
-
-    it('should support uav-src attributes', () => {
-
-        const component = uav.component({src: 'foo'}, '<img uav-src="/{src}"/>');
-
-        expect(component._el.getAttribute('src')).toBe('/foo');
-
-        component.src = 'bar';
-
-        expect(component._el.getAttribute('src')).toBe('/bar');
-
-    });
-
-    it('should support uav-style attributes', () => {
-
-        const component = uav.component({style: 0}, '<img uav-style="left:{style}px"/>');
-
-        expect(component._el.getAttribute('style')).toBe('left: 0px;');
-
-        component.style = 1;
-
-        expect(component._el.getAttribute('style')).toBe('left: 1px;');
-
-    });
-
-    it('should support boolean attributes', () => {
-
-        const component = uav.component({disabled: true}, '<input uav-attr="{disabled}"/>');
-
-        expect(component._el.getAttribute('disabled')).toBe('');
-
-        component.disabled = false;
-
-        expect(component._el.getAttribute('disabled')).toBe(null);
-
-        component.disabled = 'disabled';
-
-        expect(component._el.getAttribute('disabled')).toBe('');
 
     });
 

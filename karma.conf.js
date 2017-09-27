@@ -14,8 +14,8 @@ module.exports = function(config) {
         // list of files / patterns to load in the browser
         files: [
             'test/setup.js',
-            'src/uav.es6.js',
-            'src/uav-bind.es6.js',
+            'dist/uav.js',
+            //'src/uav-bind.js',
             'test/tests.js'
         ],
 

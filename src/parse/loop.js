@@ -1,34 +1,34 @@
-import parse from './parse';
-import util from './util';
-import uav from './uav';
-import element from './element';
-import model from './model';
+import parseExpression from './expression';
+import util from '../util';
+import uav from '../uav';
+import parseElement from './element';
+import model from '../model';
 
 export default (attribute, steps, node) => {
 
-    const evaluate = parse.expression(attribute.value);
+    const evaluate = parseExpression(attribute.value);
 
-    const loopVars = node.getAttribute('uav-as').split(',');
+    const loopVars = node.getAttribute('u-as').split(',');
 
     const as = loopVars[0];
 
     const index = loopVars[1];
 
-    node.removeAttribute('uav-loop');
+    node.removeAttribute('u-loop');
 
-    node.removeAttribute('uav-as');
+    node.removeAttribute('u-as');
 
-    const childSteps = element.parse(node.firstElementChild);
+    const childSteps = parseElement(node.firstElementChild);
 
     node.innerHTML = '';
 
-    const binding = el => (vm, state) => {
+    const binding = el => state => {
 
         const loop = {
             
             append(item, i) {
 
-                const child = util.render(childSteps, vm, {
+                const child = util.render(childSteps, state.vm, {
                     [as]: item,
                     [index]: i
                 });
@@ -41,7 +41,7 @@ export default (attribute, steps, node) => {
 
                 const childAtIndex = el.children[i];
 
-                const child = util.render(childSteps, vm, {
+                const child = util.render(childSteps, state.vm, {
                     [as]: item,
                     [index]: i
                 });
@@ -64,11 +64,11 @@ export default (attribute, steps, node) => {
 
         el.innerHTML = '';
 
-        const list = model(evaluate(vm, state.ctx) || []);
+        const list = model(evaluate(state.vm, state.ctx) || []);
 
         list._loops.push(loop);
 
-        uav.binding = null;
+        uav.state = null;
 
         list.forEach(loop.append);
 
@@ -76,11 +76,11 @@ export default (attribute, steps, node) => {
 
     steps.push(state => {
 
-        uav.binding = binding(state.el);
+        state.binding = binding(state.el);
 
-        uav.binding.ctx = state.ctx;
+        uav.state = state;
 
-        uav.binding(state.vm, state);
+        state.binding(state);
 
         return state;
 

@@ -1,6 +1,24 @@
 import util from './util';
 import uav from './uav';
 
+function copyBindings(from, to) {
+
+    if (from && from._uav && to) {
+
+        Object.keys(from).forEach(key => {
+
+            copyBindings(from[key], to[key]);
+
+        });
+
+        to._uav = from._uav;
+
+        from = null;
+
+    }
+
+}
+
 export default function model(data) {
 
     if (!util.isVmEligible(data)) {
@@ -27,25 +45,25 @@ export default function model(data) {
 
         function get() {
 
-            if (uav.binding && vm._uav) {
+            if (uav.state && vm._uav) {
 
-                let binding = uav.binding;
+                let state = uav.state;
 
                 vm._uav[key] = vm._uav[key] || [];
 
-                vm._uav[key].push(binding);
+                vm._uav[key].push(state);
 
                 uav.node._uav.push(() => {
 
                     if (vm._uav[key]) {
 
-                        const index = vm._uav[key].indexOf(binding);
+                        const index = vm._uav[key].indexOf(state);
 
                         vm._uav[key].splice(index, 1);
 
                     }
 
-                    binding = null;
+                    state = null;
 
                 });
 
@@ -59,7 +77,17 @@ export default function model(data) {
 
         function set(value) {
 
-            data[key] = model(value);
+            const alreadyVM = value && value._uav;
+
+            value = model(value);
+
+            if (!alreadyVM && data[key] && data[key]._uav) {
+
+                copyBindings(data[key], value);
+
+            }
+
+            data[key] = value;
 
             if (vm._loops) {
 
@@ -67,7 +95,7 @@ export default function model(data) {
 
             } else if (vm._uav[key]) {
 
-                vm._uav[key].forEach(binding => binding(vm, binding));
+                vm._uav[key].forEach(state => state.binding(state));
 
             }
 

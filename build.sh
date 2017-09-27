@@ -9,3 +9,5 @@ uglifyjs dist/uav.js --compress --mangle --output dist/uav.min.js
 babel src/uav-bind.js --out-file dist/uav-bind.js
 
 uglifyjs dist/uav-bind.js --compress --mangle --output dist/uav-bind.min.js
+
+npm run test --single-run

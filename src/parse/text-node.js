@@ -1,14 +1,14 @@
-import uav from './uav';
-import util from './util';
-import parse from './parse';
+import uav from '../uav';
+import util from '../util';
+import parseExpression from './expression';
 
 function bindTextNode(_node, steps, expression) {
 
-    const evaluate = parse.expression(expression);
+    const evaluate = parseExpression(expression);
 
-    const binding = node => (vm, state) => {
+    const binding = node => state => {
 
-        const value = evaluate(vm, state.ctx);
+        const value = evaluate(state.vm, state.ctx);
 
         if (value._el || value.tagName) {
 
@@ -98,6 +98,4 @@ function parseTextNode(node, steps) {
 
 }
 
-export default {
-    parse: parseTextNode
-};
+export default parseTextNode;
