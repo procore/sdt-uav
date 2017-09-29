@@ -5,9 +5,9 @@ import loop from './loop';
 
 function bindBooleanAttribute(attribute, steps) {
 
-    let property;
+    let property = util.stripTags(attribute.value);
 
-    const evaluate = parseExpression(attribute.value);
+    const evaluate = parseExpression(property);
 
     const binding = el => state => {
 
@@ -19,13 +19,15 @@ function bindBooleanAttribute(attribute, steps) {
 
         }
 
-        if (value) {
+        if (value === false) {
 
-            el.setAttribute(value, '');
-
-            property = value;
+            return;
 
         }
+
+        property = value === true ? property : value;
+
+        el.setAttribute(property, '');
 
     };
 

@@ -150,7 +150,7 @@ describe('uav', () => {
 
         let event;
 
-        const component = uav.component('<div onclick="{click}"></div>')({
+        const component = uav.component('<div u-onclick="{click}"></div>')({
             click: e => {
                 event = e;
             }
@@ -166,7 +166,7 @@ describe('uav', () => {
 
         let event;
 
-        const component = uav.component('<div onclick="{click(`foo`)}"></div>')({
+        const component = uav.component('<div u-onclick="{click(`foo`)}"></div>')({
             click: data => () => {
                 event = data;
             }
@@ -182,7 +182,7 @@ describe('uav', () => {
 
         let event;
 
-        const component = uav.component('<div onclick="{click}"></div>')({
+        const component = uav.component('<div u-onclick="{click}"></div>')({
             click: e => {
                 event = e;
             }

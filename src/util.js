@@ -63,7 +63,7 @@ const util = {
 
     isVmEligible(data) {
 
-        return !(!data || typeof data !== 'object' || data._uav || data.tagName);
+        return !(!data || typeof data !== 'object' || data._uav || data._loops || data.tagName);
 
     },
 

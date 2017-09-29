@@ -54,8 +54,6 @@ function parseTextNode(node, steps) {
 
     if (parts.length > 1) {
 
-        const parent = node.parentNode;
-
         parts.forEach(part => {
 
             if (part.trim()) {
@@ -70,7 +68,7 @@ function parseTextNode(node, steps) {
 
                     steps.push(state => {
 
-                        state.el.appendChild(newNode);
+                        state.el.appendChild(newNode.cloneNode());
 
                         return state;
 
@@ -81,8 +79,6 @@ function parseTextNode(node, steps) {
             }
 
         });
-
-        parent.removeChild(node);
 
     } else {
 
