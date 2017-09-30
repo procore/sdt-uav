@@ -6,17 +6,17 @@ import model from '../model';
 
 export default (attribute, steps, node) => {
 
-    const evaluate = parseExpression(attribute.value);
+    const loopVars = util.stripTags(attribute.value).split(' as ');
 
-    const loopVars = node.getAttribute('u-as').split(',');
+    const evaluate = parseExpression(loopVars[0]);
 
-    const as = loopVars[0];
+    const valueVars = loopVars[1].split(',');
 
-    const index = loopVars[1];
+    const as = valueVars[0].trim();
 
-    node.removeAttribute('u-loop');
+    const index = valueVars[1].trim();
 
-    node.removeAttribute('u-as');
+    node.removeAttribute('u-for');
 
     const childSteps = parseElement(node.firstElementChild);
 
@@ -73,8 +73,6 @@ export default (attribute, steps, node) => {
             }
 
         };
-
-        el.innerHTML = '';
 
         const list = model(evaluate(state.vm, state.ctx) || []);
 

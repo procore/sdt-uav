@@ -22,7 +22,7 @@ describe('uav', () => {
 
     it('should render a component given a selector', () => {
 
-        uav.component('<div id="foo"></div>')({}, '#app');
+        uav.component('<div id="foo"></div>', {}, '#app');
 
         expect(uav('#app').firstElementChild.id).toBe('foo');
 
@@ -30,7 +30,7 @@ describe('uav', () => {
 
     it('should render a component given a node', () => {
 
-        uav.component('<div id="foo"></div>')({}, document.querySelector('#app'));
+        uav.component('<div id="foo"></div>', {}, document.querySelector('#app'));
 
         expect(uav('#app').firstElementChild.id).toBe('foo');
 
@@ -38,7 +38,7 @@ describe('uav', () => {
 
     it('should bind a message', () => {
 
-        const component = uav.component('<div>{message}</div>')({
+        const component = uav.component('<div>{message}</div>', {
             message: 'foo'
         });
 
@@ -52,7 +52,7 @@ describe('uav', () => {
 
     it('should have a render callback', done => {
 
-        uav.component('<div id="foo"></div>')({}, el => {
+        uav.component('<div id="foo"></div>', {}, el => {
 
             expect(el.tagName).toBe('DIV');
 
@@ -66,7 +66,7 @@ describe('uav', () => {
 
         uav.setTag('{{', '}}');
 
-        const component = uav.component('<div>{{message}}</div>')({
+        const component = uav.component('<div>{{message}}</div>', {
             message: 'foo'
         });
 
@@ -78,7 +78,7 @@ describe('uav', () => {
 
     it('should support string attribute expressions', () => {
 
-        const component = uav.component('<div u-class="{klass}"></div>')({
+        const component = uav.component('<div u-class="{klass}"></div>', {
             klass: 'foo'
         });
 
@@ -92,7 +92,7 @@ describe('uav', () => {
 
     it('should support boolean attribute expressions', () => {
 
-        const component = uav.component('<div u-class="{foo}"></div>')({
+        const component = uav.component('<div u-class="{foo}"></div>', {
             foo: true
         });
 
@@ -107,11 +107,11 @@ describe('uav', () => {
     it('should support loops', () => {
 
         const component = uav.component(`
-        <ul u-loop="list" u-as="item,index">
-            <li>{index}: {item}</li>
-        </ul>`)({
-            list: [1, 2, 3]
-        });
+            <ul u-for="list as item, index">
+                <li>{index}: {item}</li>
+            </ul>`, {
+                list: [1, 2, 3]
+            });
 
         const secondItem = component._el.firstElementChild.nextElementSibling;
 
@@ -130,13 +130,13 @@ describe('uav', () => {
     it('should support nested loops', () => {
 
         const component = uav.component(`
-        <div u-loop="list" u-as="item,index">
-            <div u-loop="item" u-as="it,i">
-                <span>{i}:{it}</span>
-            </div>
-        </div>`)({
-            list: [[0]]
-        });
+            <div u-for="list as item,index">
+                <div u-for="item as it,i">
+                    <span>{i}:{it}</span>
+                </div>
+            </div>`, {
+                list: [[0]]
+            });
 
         expect(component._el.outerHTML).toBe('<div><div><span>0:0</span></div></div>');
 
@@ -150,7 +150,7 @@ describe('uav', () => {
 
         let event;
 
-        const component = uav.component('<div u-onclick="{click}"></div>')({
+        const component = uav.component('<div u-onclick="{click}"></div>', {
             click: e => {
                 event = e;
             }
@@ -166,7 +166,7 @@ describe('uav', () => {
 
         let event;
 
-        const component = uav.component('<div u-onclick="{click(`foo`)}"></div>')({
+        const component = uav.component('<div u-onclick="{click(`foo`)}"></div>', {
             click: data => () => {
                 event = data;
             }
@@ -182,7 +182,7 @@ describe('uav', () => {
 
         let event;
 
-        const component = uav.component('<div u-onclick="{click}"></div>')({
+        const component = uav.component('<div u-onclick="{click}"></div>', {
             click: e => {
                 event = e;
             }
@@ -200,9 +200,9 @@ describe('uav', () => {
 
     it('should support child components', () => {
 
-        const child = uav.component('<div></div>')({});
+        const child = uav.component('<div></div>', {});
 
-        const parent = uav.component('<div>{child}</div>')({child});
+        const parent = uav.component('<div>{child}</div>', {child});
 
         expect(parent._el.firstElementChild.tagName).toBe('DIV');
 
@@ -210,7 +210,7 @@ describe('uav', () => {
 
     it('should support binding html', () => {
 
-        const component = uav.component('<div>{html}</div>')({
+        const component = uav.component('<div>{html}</div>', {
             html: uav.parse('<i></i>')
         });
 
@@ -220,7 +220,7 @@ describe('uav', () => {
 
     it('should support boolean attributes', () => {
 
-        const component = uav.component('<input u-attr="{disabled}"/>')({disabled: true});
+        const component = uav.component('<input u-attr="{disabled}"/>', {disabled: true});
 
         expect(component._el.getAttribute('disabled')).toBe('');
 
@@ -237,11 +237,11 @@ describe('uav', () => {
     it('should support array.push', () => {
 
         const component = uav.component(`
-        <ul u-loop="list" u-as="item,index">
-            <li>{index}: {item}</li>
-        </ul>`)({
-            list: [1]
-        });
+            <ul u-for="list as item,index">
+                <li>{index}: {item}</li>
+            </ul>`, {
+                list: [1]
+            });
 
         const firstItem = component._el.firstElementChild;
 
@@ -260,11 +260,11 @@ describe('uav', () => {
     it('should support array.pop', () => {
 
         const component = uav.component(`
-        <ul u-loop="list" u-as="item,index">
-            <li>{index}: {item}</li>
-        </ul>`)({
-            list: [1, 2]
-        });
+            <ul u-for="list as item,index">
+                <li>{index}: {item}</li>
+            </ul>`, {
+                list: [1, 2]
+            });
 
         const firstItem = component._el.firstElementChild;
 
@@ -281,11 +281,11 @@ describe('uav', () => {
     it('should support array.shift', () => {
 
         const component = uav.component(`
-        <ul u-loop="list" u-as="item,index">
-            <li>{index}: {item}</li>
-        </ul>`)({
-            list: [1, 2]
-        });
+            <ul u-for="list as item,index">
+                <li>{index}: {item}</li>
+            </ul>`, {
+                list: [1, 2]
+            });
 
         const result = component.list.shift();
 
@@ -298,11 +298,11 @@ describe('uav', () => {
     it('should support array.splice deletion', () => {
 
         const component = uav.component(`
-        <ul u-loop="list" u-as="item,index">
-            <li>{index}: {item}</li>
-        </ul>`)({
-            list: [1, 2]
-        });
+            <ul u-for="list as item,index">
+                <li>{index}: {item}</li>
+            </ul>`, {
+                list: [1, 2]
+            });
 
         const result = component.list.splice(0, 1);
 
@@ -315,11 +315,11 @@ describe('uav', () => {
     it('should support array.splice addition', () => {
 
         const component = uav.component(`
-        <ul u-loop="list" u-as="item,index">
-            <li>{index}: {item}</li>
-        </ul>`)({
-            list: [1]
-        });
+            <ul u-for="list as item,index">
+                <li>{index}: {item}</li>
+            </ul>`, {
+                list: [1]
+            });
 
         const result = component.list.splice(1, 0, 2, 3);
 
@@ -336,11 +336,11 @@ describe('uav', () => {
     it('should support array.unshift', () => {
 
         const component = uav.component(`
-        <ul u-loop="list" u-as="item,index">
-            <li>{index}: {item}</li>
-        </ul>`)({
-            list: [1]
-        });
+            <ul u-for="list as item,index">
+                <li>{index}: {item}</li>
+            </ul>`, {
+                list: [1]
+            });
 
         component.list.unshift(0);
 
@@ -355,11 +355,11 @@ describe('uav', () => {
     it('should support array.reverse', () => {
 
         const component = uav.component(`
-        <ul u-loop="list" u-as="item,index">
-            <li>{index}: {item}</li>
-        </ul>`)({
-            list: [1, 2]
-        });
+            <ul u-for="list as item,index">
+                <li>{index}: {item}</li>
+            </ul>`, {
+                list: [1, 2]
+            });
 
         component.list.reverse();
 
@@ -370,11 +370,11 @@ describe('uav', () => {
     it('should support array.sort', () => {
 
         const component = uav.component(`
-        <ul u-loop="list" u-as="item,index">
-            <li>{index}: {item}</li>
-        </ul>`)({
-            list: [1, 2]
-        });
+            <ul u-for="list as item,index">
+                <li>{index}: {item}</li>
+            </ul>`, {
+                list: [1, 2]
+            });
 
         component.list.sort((a, b) => b - a);
 

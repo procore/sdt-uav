@@ -95,7 +95,7 @@ function parseAttribute(attribute, steps, node) {
 
         switch (attribute.name) {
 
-        case 'u-loop':
+        case 'u-for':
 
             return loop(attribute, steps, node);
 

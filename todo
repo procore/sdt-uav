@@ -1,3 +1,4 @@
+- deeply nested objects, do loops have access to all scopes?
 - unit tests
 - comments
 - benchmark
