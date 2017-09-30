@@ -37,6 +37,18 @@ export default (attribute, steps, node) => {
 
             },
 
+            remove(i) {
+
+                if (el.children[i]) {
+
+                    util.unbind(el.children[i]);
+
+                    el.children[i].remove();
+
+                }
+
+            },
+
             replace(item, i) {
 
                 const childAtIndex = el.children[i];

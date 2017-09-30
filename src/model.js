@@ -1,5 +1,6 @@
 import util from './util';
 import uav from './uav';
+import bindArrayMethods from './bind-array-methods';
 
 function copyBindings(from, to) {
 
@@ -21,7 +22,7 @@ function copyBindings(from, to) {
 
 export default function model(data) {
 
-    if (!util.isVmEligible(data)) {
+    if (!data || typeof data !== 'object' || data._uav || data._loops || data.tagName) {
 
         return data;
 
@@ -35,13 +36,15 @@ export default function model(data) {
 
         util.defineProp(vm, '_loops', []);
 
+        bindArrayMethods(vm);
+
     } else {
 
         util.defineProp(vm, '_uav', {});
 
     }
 
-    Object.keys(data).forEach(key => {
+    util.defineProp(vm, '_watch', (val, key) => {
 
         function get() {
 
@@ -77,31 +80,35 @@ export default function model(data) {
 
         function set(value) {
 
-            const alreadyVM = value && value._uav;
+            if (data[key] !== value || typeof value === 'object') {
 
-            value = model(value);
+                const alreadyVM = value && value._uav;
 
-            if (!alreadyVM && data[key] && data[key]._uav) {
+                value = model(value);
 
-                copyBindings(data[key], value);
+                if (!alreadyVM && data[key] && data[key]._uav) {
 
-            }
+                    copyBindings(data[key], value);
 
-            data[key] = value;
+                }
 
-            if (vm._loops) {
+                data[key] = value;
 
-                vm._loops.forEach(loop => loop.replace(data[key], key));
+                if (vm._loops) {
 
-            } else if (vm._uav[key]) {
+                    vm._loops.forEach(loop => loop.replace(data[key], key));
 
-                vm._uav[key].forEach(state => state.binding(state));
+                } else if (vm._uav[key]) {
+
+                    vm._uav[key].forEach(state => state.binding(state));
+
+                }
 
             }
 
         }
 
-        data[key] = model(data[key]);
+        data[key] = model(val);
 
         Object.defineProperty(vm, key, {
             get,
@@ -111,6 +118,8 @@ export default function model(data) {
         });
 
     });
+
+    Object.keys(data).forEach(key => vm._watch(data[key], key));
 
     return vm;
 

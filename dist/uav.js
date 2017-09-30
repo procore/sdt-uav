@@ -90,12 +90,6 @@ const util = {
 
     },
 
-    isVmEligible(data) {
-
-        return !(!data || typeof data !== 'object' || data._uav || data._loops || data.tagName);
-
-    },
-
     createElement(tag) {
 
         if (tag === 'svg' || tag === 'path') {
@@ -126,6 +120,92 @@ var parseHtml = (html, parent) => {
 
 };
 
+var bindArrayMethods = list => {
+
+    util.defineProp(list, 'push', (...args) => {
+
+        const startIndex = list.length;
+
+        args.forEach(arg => list._watch(arg, list.length));
+
+        list._loops.forEach(loop => {
+
+            args.forEach((arg, i) => {
+
+                loop.append(arg, startIndex + i);
+
+            });
+
+        });
+
+        return list;
+
+    });
+
+    util.defineProp(list, 'pop', () => {
+
+        list._loops.forEach(loop => loop.remove(list.length - 1));
+
+        return Array.prototype.pop.call(list);
+
+    });
+
+    util.defineProp(list, 'shift', () => {
+
+        list._loops.forEach(loop => loop.remove(0));
+
+        return Array.prototype.shift.call(list);
+
+    });
+
+    util.defineProp(list, 'splice', (...args) => {
+
+        const originalLength = list.length;
+
+        const start = args.shift();
+
+        const deleteCount = args.shift();
+
+        const result = Array.prototype.splice.apply(list, [start, deleteCount].concat(args));
+
+        for (let i = originalLength; i < list.length; i++) {
+
+            list._watch(list[i], i);
+
+            list._loops.forEach(loop => loop.append(list[i], i));
+
+        }
+
+        for (let i = list.length; i < originalLength; i++) {
+
+            list._loops.forEach(loop => loop.remove(i));
+
+        }
+
+        return result;
+
+    });
+
+    util.defineProp(list, 'unshift', (...args) => {
+
+        const originalLength = list.length;
+
+        Array.prototype.unshift.apply(list, args);
+
+        for (let i = originalLength; i < list.length; i++) {
+
+            list._watch(list[i], i);
+
+            list._loops.forEach(loop => loop.append(list[i], i));
+
+        }
+
+        return list;
+
+    });
+
+};
+
 function copyBindings(from, to) {
 
     if (from && from._uav && to) {
@@ -146,7 +226,7 @@ function copyBindings(from, to) {
 
 function model(data) {
 
-    if (!util.isVmEligible(data)) {
+    if (!data || typeof data !== 'object' || data._uav || data._loops || data.tagName) {
 
         return data;
 
@@ -160,13 +240,15 @@ function model(data) {
 
         util.defineProp(vm, '_loops', []);
 
+        bindArrayMethods(vm);
+
     } else {
 
         util.defineProp(vm, '_uav', {});
 
     }
 
-    Object.keys(data).forEach(key => {
+    util.defineProp(vm, '_watch', (val, key) => {
 
         function get() {
 
@@ -202,31 +284,35 @@ function model(data) {
 
         function set(value) {
 
-            const alreadyVM = value && value._uav;
+            if (data[key] !== value || typeof value === 'object') {
 
-            value = model(value);
+                const alreadyVM = value && value._uav;
 
-            if (!alreadyVM && data[key] && data[key]._uav) {
+                value = model(value);
 
-                copyBindings(data[key], value);
+                if (!alreadyVM && data[key] && data[key]._uav) {
 
-            }
+                    copyBindings(data[key], value);
 
-            data[key] = value;
+                }
 
-            if (vm._loops) {
+                data[key] = value;
 
-                vm._loops.forEach(loop => loop.replace(data[key], key));
+                if (vm._loops) {
 
-            } else if (vm._uav[key]) {
+                    vm._loops.forEach(loop => loop.replace(data[key], key));
 
-                vm._uav[key].forEach(state => state.binding(state));
+                } else if (vm._uav[key]) {
+
+                    vm._uav[key].forEach(state => state.binding(state));
+
+                }
 
             }
 
         }
 
-        data[key] = model(data[key]);
+        data[key] = model(val);
 
         Object.defineProperty(vm, key, {
             get,
@@ -236,6 +322,8 @@ function model(data) {
         });
 
     });
+
+    Object.keys(data).forEach(key => vm._watch(data[key], key));
 
     return vm;
 
@@ -297,6 +385,18 @@ var loop = (attribute, steps, node) => {
                 });
 
                 el.appendChild(child);
+
+            },
+
+            remove(i) {
+
+                if (el.children[i]) {
+
+                    util.unbind(el.children[i]);
+
+                    el.children[i].remove();
+
+                }
 
             },
 

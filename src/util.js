@@ -61,12 +61,6 @@ const util = {
 
     },
 
-    isVmEligible(data) {
-
-        return !(!data || typeof data !== 'object' || data._uav || data._loops || data.tagName);
-
-    },
-
     createElement(tag) {
 
         if (tag === 'svg' || tag === 'path') {
