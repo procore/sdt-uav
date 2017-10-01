@@ -1,4 +1,4 @@
-- deeply nested objects, do loops have access to all scopes?
+- deeply nested objects
 - unit tests
 - comments
 - benchmark

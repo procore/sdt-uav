@@ -12,8 +12,6 @@ export default expression => {
 
         } catch (err) {
 
-            console.error(expression, err);
-
             result = '';
 
         }

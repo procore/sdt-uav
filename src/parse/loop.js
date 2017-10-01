@@ -14,7 +14,7 @@ export default (attribute, steps, node) => {
 
     const as = valueVars[0].trim();
 
-    const index = valueVars[1].trim();
+    const index = valueVars[1] ? valueVars[1].trim() : null;
 
     node.removeAttribute('u-for');
 
@@ -24,14 +24,20 @@ export default (attribute, steps, node) => {
 
     const binding = el => state => {
 
+        function renderChild(item, i) {
+
+            return util.render(childSteps, state.vm, Object.assign({}, state.ctx, {
+                [as]: item,
+                [index]: i
+            }));
+
+        }
+
         const loop = {
             
             append(item, i) {
 
-                const child = util.render(childSteps, state.vm, {
-                    [as]: item,
-                    [index]: i
-                });
+                const child = renderChild(item, i);
 
                 el.appendChild(child);
 
@@ -53,10 +59,7 @@ export default (attribute, steps, node) => {
 
                 const childAtIndex = el.children[i];
 
-                const child = util.render(childSteps, state.vm, {
-                    [as]: item,
-                    [index]: i
-                });
+                const child = renderChild(item, i);
 
                 if (childAtIndex) {
 
