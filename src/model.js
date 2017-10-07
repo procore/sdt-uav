@@ -2,6 +2,14 @@ import util from './util';
 import uav from './uav';
 import bindArrayMethods from './bind-array-methods';
 
+/**
+ * Recursively copy all bindings from one model
+ * to another.
+ * 
+ * @param  {Object} from - the old object
+ * @param  {Object} to   - the new object
+ * @return {Object}      - the new object
+ */
 function copyBindings(from, to) {
 
     if (from && from._uav && to) {
@@ -20,9 +28,17 @@ function copyBindings(from, to) {
 
 }
 
+/**
+ * Adds getters and setters to all properties
+ * of an object so that view bindings will be
+ * executed if the properties are modified.
+ * 
+ * @param  {Object|Array} data - the source for the model
+ * @return {Object}            - the bound model
+ */
 export default function model(data) {
 
-    if (!data || typeof data !== 'object' || data._uav || data._loops || data.tagName) {
+    if (!data || typeof data !== 'object' || data._uav || data.tagName) {
 
         return data;
 
@@ -38,17 +54,15 @@ export default function model(data) {
 
         bindArrayMethods(vm);
 
-    } else {
-
-        util.defineProp(vm, '_uav', {});
-
     }
+
+    util.defineProp(vm, '_uav', {});
 
     util.defineProp(vm, '_watch', (val, key) => {
 
         function get() {
 
-            if (uav.state && vm._uav) {
+            if (uav.state) {
 
                 let state = uav.state;
 
@@ -80,7 +94,7 @@ export default function model(data) {
 
         function set(value) {
 
-            if (data[key] !== value || typeof value === 'object') {
+            if (data[key] !== value) {
 
                 const alreadyVM = value && value._uav;
 
@@ -98,7 +112,9 @@ export default function model(data) {
 
                     vm._loops.forEach(loop => loop.replace(data[key], key));
 
-                } else if (vm._uav[key]) {
+                }
+
+                if (vm._uav[key]) {
 
                     vm._uav[key].forEach(state => state.binding(state));
 

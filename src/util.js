@@ -29,7 +29,7 @@ const util = {
         if (node && node._uav) {
 
             Array.from(node.children).forEach(util.unbind);
-
+            console.log('removing ' + node._uav.length + ' bindings');
             node._uav.forEach(fn => fn());
 
             node = null;

@@ -382,4 +382,118 @@ describe('uav', () => {
 
     });
 
+    it('should support two way binding on text inputs', () => {
+
+        const component = uav.component('<input type="text" u-bind="value"/>', {
+            value: 'foo'
+        });
+
+        expect(component._el.value).toBe('foo');
+
+        component._el.value = 'bar';
+
+        component._el.dispatchEvent(new Event('input'));
+
+        expect(component.value).toBe('bar');
+
+    });
+
+    it('should support two way binding on textareas', () => {
+
+        const component = uav.component('<textarea u-bind="value"></textarea>', {
+            value: 'foo'
+        });
+
+        expect(component._el.value).toBe('foo');
+
+        component._el.value = 'bar';
+
+        component._el.dispatchEvent(new Event('input'));
+
+        expect(component.value).toBe('bar');
+
+    });
+
+    it('should support two way binding on select inputs', () => {
+
+        const component = uav.component(`
+        <select u-bind="value">
+            <option value="foo"></option>
+            <option value="bar"></option>
+        </select>`, {
+                value: 'foo'
+            });
+
+        expect(component._el.value).toBe('foo');
+
+        component._el.value = 'bar';
+
+        component._el.dispatchEvent(new Event('input'));
+
+        expect(component.value).toBe('bar');
+
+    });
+
+    it('should support two way binding on radio buttons', () => {
+
+        const component = uav.component(`
+        <div>
+            <input type="radio" value="foo" u-bind="value"/>
+            <input type="radio" value="bar" u-bind="value"/>
+        </div>`, {
+                value: 'foo'
+            });
+
+        expect(component._el.firstElementChild.checked).toBe(true);
+
+        component._el.lastElementChild.checked = true;
+
+        component._el.lastElementChild.dispatchEvent(new Event('change'));
+
+        expect(component.value).toBe('bar');
+
+    });
+
+    it('should support two way binding of booleans on checkboxes', () => {
+
+        const component = uav.component('<input type="checkbox" u-bind="value"/>', {
+            value: true
+        });
+
+        expect(component._el.checked).toBe(true);
+
+        component._el.checked = false;
+
+        component._el.dispatchEvent(new Event('change'));
+
+        expect(component.value).toBe(false);
+
+    });
+
+    it('should support two way binding of checkboxes to arrays', () => {
+
+        const component = uav.component(`
+            <div>
+                <input type="checkbox" value="foo" u-bind="list"/>
+                <input type="checkbox" value="bar" u-bind="list"/>
+            </div>`, {
+                list: ['foo']
+            });
+
+        expect(component._el.firstElementChild.checked).toBe(true);
+
+        expect(component._el.lastElementChild.checked).toBe(false);
+
+        component._el.lastElementChild.checked = true;
+
+        component._el.lastElementChild.dispatchEvent(new Event('change'));
+
+        expect(component.list[1]).toBe('bar');
+
+        component.list.shift();
+
+        expect(component._el.firstElementChild.checked).toBe(false);
+
+    });
+
 });

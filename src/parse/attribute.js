@@ -2,6 +2,7 @@ import uav from '../uav';
 import util from '../util';
 import parseExpression from './expression';
 import loop from './loop';
+import twoWayBind from './two-way-bind';
 
 function bindBooleanAttribute(attribute, steps) {
 
@@ -27,7 +28,11 @@ function bindBooleanAttribute(attribute, steps) {
 
         property = value === true ? property : value;
 
-        el.setAttribute(property, '');
+        if (property) {
+
+            el.setAttribute(property, '');
+
+        }
 
     };
 
@@ -102,6 +107,10 @@ function parseAttribute(attribute, steps, node) {
         case 'u-attr':
 
             return bindBooleanAttribute(attribute, steps);
+
+        case 'u-bind':
+
+            return twoWayBind(attribute, steps, node);
 
         }
         

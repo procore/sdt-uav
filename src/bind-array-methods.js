@@ -1,5 +1,13 @@
 import util from './util';
 
+/**
+ * Wrap all array methods that modify the length
+ * of the array, so that the appropriate cleanup
+ * or binding is triggered.
+ * 
+ * @param  {Array} list - the array to modify
+ * @return {undefined}
+ */
 export default list => {
 
     util.defineProp(list, 'push', (...args) => {
