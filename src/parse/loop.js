@@ -24,6 +24,14 @@ export default (attribute, steps, node) => {
 
     const binding = el => state => {
 
+        Array.from(el.children).forEach(util.unbind);
+
+        el.innerHTML = '';
+
+        const list = model(evaluate(state.vm, state.ctx) || []);
+
+        uav.state = null;
+
         function renderChild(item, i) {
 
             return util.render(childSteps, state.vm, Object.assign({}, state.ctx, {
@@ -77,11 +85,7 @@ export default (attribute, steps, node) => {
 
         };
 
-        const list = model(evaluate(state.vm, state.ctx) || []);
-
         list._loops.push(loop);
-
-        uav.state = null;
 
         list.forEach(loop.append);
 
@@ -89,13 +93,7 @@ export default (attribute, steps, node) => {
 
     steps.push(state => {
 
-        state.binding = binding(state.el);
-
-        uav.state = state;
-
-        state.binding(state);
-
-        return state;
+        return util.bindStep(binding(state.el), state);
 
     });
 

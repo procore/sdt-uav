@@ -3,7 +3,7 @@ import util from '../util';
 import parseExpression from './expression';
 
 function bindTextNode(_node, steps, expression) {
-
+    
     const evaluate = parseExpression(expression);
 
     const binding = node => state => {

@@ -116,7 +116,11 @@ export default function model(data) {
 
                 if (vm._uav[key]) {
 
-                    vm._uav[key].forEach(state => state.binding(state));
+                    vm._uav[key].forEach(state =>{
+
+                        state.binding(state);
+
+                    });
 
                 }
 

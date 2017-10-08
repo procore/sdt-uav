@@ -75,7 +75,11 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
             if (node && node._uav) {
 
                 Array.from(node.children).forEach(util.unbind);
-                console.log('removing ' + node._uav.length + ' bindings');
+
+                if (node._uav.length) {
+                    console.log('removing ' + node._uav.length + ' bindings');
+                }
+
                 node._uav.forEach(function (fn) {
                     return fn();
                 });
@@ -123,11 +127,9 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
          */
         bindStep: function bindStep(binding, state) {
 
-            state.binding = binding;
+            uav.state = Object.assign({}, state, { binding: binding });
 
-            uav.state = state;
-
-            binding(state);
+            binding(uav.state);
 
             uav.state = null;
 
@@ -146,10 +148,14 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
          */
         render: function render(steps, vm, ctx) {
 
+            uav.node = steps.root();
+
+            util.defineProp(uav.node, '_uav', []);
+
             return [{
                 vm: vm,
                 ctx: ctx,
-                el: steps.root()
+                el: uav.node
             }].concat(steps).reduce(function (a, b) {
                 return b(a);
             }).el;
@@ -408,7 +414,8 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
                     if (vm._uav[key]) {
 
                         vm._uav[key].forEach(function (state) {
-                            return state.binding(state);
+
+                            state.binding(state);
                         });
                     }
                 }
@@ -441,6 +448,8 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
             try {
 
+                //result = evaluator(vm, ctx ? ctx() : {});
+
                 result = evaluator(vm, ctx || {});
             } catch (err) {
 
@@ -471,6 +480,14 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
         var binding = function binding(el) {
             return function (state) {
+
+                Array.from(el.children).forEach(util.unbind);
+
+                el.innerHTML = '';
+
+                var list = model(evaluate(state.vm, state.ctx) || []);
+
+                uav.state = null;
 
                 function renderChild(item, i) {
                     var _Object$assign;
@@ -512,11 +529,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
                     }
                 };
 
-                var list = model(evaluate(state.vm, state.ctx) || []);
-
                 list._loops.push(loop);
-
-                uav.state = null;
 
                 list.forEach(loop.append);
             };
@@ -524,13 +537,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
         steps.push(function (state) {
 
-            state.binding = binding(state.el);
-
-            uav.state = state;
-
-            state.binding(state);
-
-            return state;
+            return util.bindStep(binding(state.el), state);
         });
     };
 
@@ -864,10 +871,6 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
     }
 
     function parseElement(node) {
-
-        uav.node = node;
-
-        util.defineProp(uav.node, '_uav', []);
 
         var steps = [];
 

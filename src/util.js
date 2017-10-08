@@ -29,7 +29,11 @@ const util = {
         if (node && node._uav) {
 
             Array.from(node.children).forEach(util.unbind);
-            console.log('removing ' + node._uav.length + ' bindings');
+
+            if (node._uav.length) {
+                console.log('removing ' + node._uav.length + ' bindings');
+            }
+
             node._uav.forEach(fn => fn());
 
             node = null;
@@ -74,11 +78,9 @@ const util = {
      */
     bindStep(binding, state) {
 
-        state.binding = binding;
+        uav.state = Object.assign({}, state, {binding});
 
-        uav.state = state;
-
-        binding(state);
+        binding(uav.state);
 
         uav.state = null;
 
@@ -97,10 +99,14 @@ const util = {
      */
     render(steps, vm, ctx) {
 
+        uav.node = steps.root();
+
+        util.defineProp(uav.node, '_uav', []);
+
         return [{
             vm,
             ctx,
-            el: steps.root()
+            el: uav.node
         }].concat(steps).reduce((a, b) => b(a)).el;
 
     },

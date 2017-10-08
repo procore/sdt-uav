@@ -8,6 +8,8 @@ export default expression => {
 
         try {
 
+            //result = evaluator(vm, ctx ? ctx() : {});
+
             result = evaluator(vm, ctx || {});
 
         } catch (err) {

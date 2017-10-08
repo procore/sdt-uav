@@ -15,7 +15,6 @@ module.exports = function(config) {
         files: [
             'test/setup.js',
             'dist/uav.js',
-            //'src/uav-bind.js',
             'test/tests.js'
         ],
 

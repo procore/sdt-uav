@@ -1,13 +1,8 @@
-import uav from '../uav';
 import util from '../util';
 import parseAttribute from './attribute';
 import parseTextNode from './text-node';
 
 function parseElement(node) {
-
-    uav.node = node;
-
-    util.defineProp(uav.node, '_uav', []);
 
     const steps = [];
 
