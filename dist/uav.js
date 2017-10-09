@@ -159,22 +159,6 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
             }].concat(steps).reduce(function (a, b) {
                 return b(a);
             }).el;
-        },
-
-
-        /**
-         * Create a DOM element with the given tag name.
-         * @param  {String} tag - the tag name
-         * @return {Element}
-         */
-        createElement: function createElement(tag) {
-
-            if (tag === 'svg' || tag === 'path') {
-
-                return document.createElementNS('http://www.w3.org/2000/svg', tag);
-            }
-
-            return document.createElement(tag);
         }
     };
 
@@ -209,17 +193,32 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
             var startIndex = list.length;
 
-            args.forEach(function (arg) {
-                return list._watch(arg, list.length);
-            });
+            // args.forEach(arg => list._watch(arg, list.length));
 
-            list._loops.forEach(function (loop) {
+            // list._loops.forEach(loop => {
 
-                args.forEach(function (arg, i) {
+            //     args.forEach((arg, i) => {
 
-                    loop.append(arg, startIndex + i);
+            //         loop.append(arg, startIndex + i);
+
+            //     });
+
+            // });
+
+            Array.prototype.push.apply(list, args);
+
+            var _loop = function _loop(i) {
+
+                list._watch(list[i], i);
+
+                list._loops.forEach(function (loop) {
+                    return loop.append(list[i], i);
                 });
-            });
+            };
+
+            for (var i = startIndex; i < startIndex + args.length; i++) {
+                _loop(i);
+            }
 
             return list;
         });
@@ -255,7 +254,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
             var result = Array.prototype.splice.apply(list, [start, deleteCount].concat(args));
 
-            var _loop = function _loop(i) {
+            var _loop2 = function _loop2(i) {
 
                 list._watch(list[i], i);
 
@@ -265,10 +264,10 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
             };
 
             for (var i = originalLength; i < list.length; i++) {
-                _loop(i);
+                _loop2(i);
             }
 
-            var _loop2 = function _loop2(i) {
+            var _loop3 = function _loop3(i) {
 
                 list._loops.forEach(function (loop) {
                     return loop.remove(i);
@@ -276,7 +275,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
             };
 
             for (var i = list.length; i < originalLength; i++) {
-                _loop2(i);
+                _loop3(i);
             }
 
             return result;
@@ -291,7 +290,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
             Array.prototype.unshift.apply(list, args);
 
-            var _loop3 = function _loop3(i) {
+            var _loop4 = function _loop4(i) {
 
                 list._watch(list[i], i);
 
@@ -301,12 +300,17 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
             };
 
             for (var i = originalLength; i < list.length; i++) {
-                _loop3(i);
+                _loop4(i);
             }
 
             return list;
         });
     };
+
+    function notVmEligible(data) {
+
+        return !data || typeof data !== 'object' || data._uav || data.tagName;
+    }
 
     /**
      * Recursively copy all bindings from one model
@@ -318,7 +322,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
      */
     function copyBindings(from, to) {
 
-        if (from && from._uav && to) {
+        if (from && from._uav && !notVmEligible(to)) {
 
             Object.keys(from).forEach(function (key) {
 
@@ -341,7 +345,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
      */
     function model(data) {
 
-        if (!data || typeof data !== 'object' || data._uav || data.tagName) {
+        if (notVmEligible(data)) {
 
             return data;
         }
@@ -471,8 +475,6 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         var as = valueVars[0].trim();
 
         var index = valueVars[1] ? valueVars[1].trim() : null;
-
-        node.removeAttribute('u-for');
 
         var childSteps = parseElement(node.firstElementChild);
 
@@ -764,6 +766,13 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
         if (attribute.name.indexOf('u-') === 0) {
 
+            attribute = {
+                name: attribute.name,
+                value: attribute.value
+            };
+
+            node.removeAttribute(attribute.name);
+
             switch (attribute.name) {
 
                 case 'u-for':
@@ -801,7 +810,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
                 var value = evaluate(state.vm, state.ctx);
 
-                if (value._el || value.tagName) {
+                if (value && (value._el || value.tagName)) {
 
                     var newNode = value._el ? value._el : value;
 
@@ -875,13 +884,13 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         var steps = [];
 
         steps.root = function () {
-            return util.createElement(node.tagName);
+            return node.cloneNode(false);
         };
 
-        for (var i = 0; i < node.attributes.length; i++) {
+        Array.from(node.attributes).forEach(function (attribute) {
 
-            parseAttribute(node.attributes[i], steps, node);
-        }
+            parseAttribute(attribute, steps, node);
+        });
 
         if (node.value) {
 
@@ -949,7 +958,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
             }
         }
 
-        var _loop4 = function _loop4(i) {
+        var _loop5 = function _loop5(i) {
 
             if (typeof _arguments[i] === 'function') {
 
@@ -962,9 +971,9 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         };
 
         for (var i = 1; i < arguments.length; i++) {
-            var _ret4 = _loop4(i);
+            var _ret5 = _loop5(i);
 
-            if (_ret4 === 'break') break;
+            if (_ret5 === 'break') break;
         }
 
         return vm;
@@ -996,4 +1005,9 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
     uav.setTag = util.setTag;
 
     window.uav = uav;
+
+    if (typeof module !== 'undefined' && module.exports) {
+
+        module.exports = uav;
+    }
 })();

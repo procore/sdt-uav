@@ -16,8 +16,6 @@ export default (attribute, steps, node) => {
 
     const index = valueVars[1] ? valueVars[1].trim() : null;
 
-    node.removeAttribute('u-for');
-
     const childSteps = parseElement(node.firstElementChild);
 
     node.innerHTML = '';

@@ -10,7 +10,7 @@ function bindTextNode(_node, steps, expression) {
 
         const value = evaluate(state.vm, state.ctx);
 
-        if (value._el || value.tagName) {
+        if (value && (value._el || value.tagName)) {
 
             const newNode = value._el ? value._el : value;
 

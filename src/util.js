@@ -109,23 +109,6 @@ const util = {
             el: uav.node
         }].concat(steps).reduce((a, b) => b(a)).el;
 
-    },
-
-    /**
-     * Create a DOM element with the given tag name.
-     * @param  {String} tag - the tag name
-     * @return {Element}
-     */
-    createElement(tag) {
-
-        if (tag === 'svg' || tag === 'path') {
-
-            return document.createElementNS('http://www.w3.org/2000/svg', tag);
-
-        }
-
-        return document.createElement(tag);
-
     }
 
 };

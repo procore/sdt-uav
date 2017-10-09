@@ -30,5 +30,12 @@ uav.component = component;
 uav.model = model;
 uav.parse = parseHtml;
 uav.setTag = util.setTag;
+uav.unbind = util.unbind;
 
 window.uav = uav;
+
+if (typeof module !== 'undefined' && module.exports) {
+
+    module.exports = uav;
+
+}

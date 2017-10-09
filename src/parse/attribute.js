@@ -98,6 +98,13 @@ function parseAttribute(attribute, steps, node) {
 
     if (attribute.name.indexOf('u-') === 0) {
 
+        attribute = {
+            name: attribute.name,
+            value: attribute.value
+        };
+
+        node.removeAttribute(attribute.name);
+
         switch (attribute.name) {
 
         case 'u-for':

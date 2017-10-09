@@ -6,13 +6,13 @@ function parseElement(node) {
 
     const steps = [];
 
-    steps.root = () => util.createElement(node.tagName);
+    steps.root = () => node.cloneNode(false);
 
-    for (let i = 0; i < node.attributes.length; i++) {
+    Array.from(node.attributes).forEach(attribute => {
 
-        parseAttribute(node.attributes[i], steps, node);
+        parseAttribute(attribute, steps, node);
 
-    }
+    });
 
     if (node.value) {
 

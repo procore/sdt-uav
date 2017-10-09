@@ -14,17 +14,27 @@ export default list => {
 
         const startIndex = list.length;
 
-        args.forEach(arg => list._watch(arg, list.length));
+        // args.forEach(arg => list._watch(arg, list.length));
 
-        list._loops.forEach(loop => {
+        // list._loops.forEach(loop => {
 
-            args.forEach((arg, i) => {
+        //     args.forEach((arg, i) => {
 
-                loop.append(arg, startIndex + i);
+        //         loop.append(arg, startIndex + i);
 
-            });
+        //     });
 
-        });
+        // });
+
+        Array.prototype.push.apply(list, args);
+
+        for (let i = startIndex; i < startIndex + args.length; i++) {
+
+            list._watch(list[i], i);
+
+            list._loops.forEach(loop => loop.append(list[i], i));
+
+        }
 
         return list;
 

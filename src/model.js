@@ -2,6 +2,12 @@ import util from './util';
 import uav from './uav';
 import bindArrayMethods from './bind-array-methods';
 
+function notVmEligible(data) {
+
+    return !data || typeof data !== 'object' || data._uav || data.tagName;
+
+}
+
 /**
  * Recursively copy all bindings from one model
  * to another.
@@ -12,7 +18,7 @@ import bindArrayMethods from './bind-array-methods';
  */
 function copyBindings(from, to) {
 
-    if (from && from._uav && to) {
+    if (from && from._uav && !notVmEligible(to)) {
 
         Object.keys(from).forEach(key => {
 
@@ -38,7 +44,7 @@ function copyBindings(from, to) {
  */
 export default function model(data) {
 
-    if (!data || typeof data !== 'object' || data._uav || data.tagName) {
+    if (notVmEligible(data)) {
 
         return data;
 
