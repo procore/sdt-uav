@@ -82,9 +82,11 @@ function parseTextNode(node, steps) {
 
     } else {
 
+        const text = node.textContent;
+
         steps.push(state => {
 
-            state.el.appendChild(node.cloneNode());
+            state.el.appendChild(document.createTextNode(text));
 
             return state;
 

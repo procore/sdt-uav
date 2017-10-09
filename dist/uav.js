@@ -452,15 +452,13 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
             try {
 
-                //result = evaluator(vm, ctx ? ctx() : {});
-
                 result = evaluator(vm, ctx || {});
             } catch (err) {
 
                 result = '';
             }
 
-            return result;
+            return result === undefined || result === null ? '' : result;
         };
     };
 
@@ -870,9 +868,11 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
             });
         } else {
 
+            var text = node.textContent;
+
             steps.push(function (state) {
 
-                state.el.appendChild(node.cloneNode());
+                state.el.appendChild(document.createTextNode(text));
 
                 return state;
             });
@@ -884,7 +884,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         var steps = [];
 
         steps.root = function () {
-            return node.cloneNode(false);
+            return node.cloneNode();
         };
 
         Array.from(node.attributes).forEach(function (attribute) {
@@ -987,7 +987,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
         Array.from = function (object) {
 
-            return [].slice.call(object);
+            return object ? [].slice.call(object) : [];
         };
     }
 
@@ -1003,6 +1003,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
     uav.model = model;
     uav.parse = parseHtml;
     uav.setTag = util.setTag;
+    uav.unbind = util.unbind;
 
     window.uav = uav;
 

@@ -6,7 +6,7 @@ function parseElement(node) {
 
     const steps = [];
 
-    steps.root = () => node.cloneNode(false);
+    steps.root = () => node.cloneNode();
 
     Array.from(node.attributes).forEach(attribute => {
 
