@@ -30,10 +30,6 @@ const util = {
 
             Array.from(node.children).forEach(util.unbind);
 
-            if (node._uav.length) {
-                console.log('removing ' + node._uav.length + ' bindings');
-            }
-
             node._uav.forEach(fn => fn());
 
             node = null;

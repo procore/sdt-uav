@@ -76,10 +76,6 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
                 Array.from(node.children).forEach(util.unbind);
 
-                if (node._uav.length) {
-                    console.log('removing ' + node._uav.length + ' bindings');
-                }
-
                 node._uav.forEach(function (fn) {
                     return fn();
                 });
@@ -948,11 +944,13 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
             if (typeof parent === 'string') {
 
                 parent = uav(parent);
-
-                parent.innerHTML = '';
             }
 
-            if (parent.appendChild) {
+            if (parent.tagName) {
+
+                uav.unbind(parent.firstElementChild);
+
+                parent.innerHTML = '';
 
                 parent.appendChild(vm._el);
             }

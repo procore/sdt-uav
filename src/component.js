@@ -30,11 +30,13 @@ export default function(html, vm, parent) {
 
             parent = uav(parent);
 
-            parent.innerHTML = '';
-
         }
 
-        if (parent.appendChild) {
+        if (parent.tagName) {
+
+            uav.unbind(parent.firstElementChild);
+
+            parent.innerHTML = '';
 
             parent.appendChild(vm._el);
 

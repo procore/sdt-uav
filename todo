@@ -1,3 +1,4 @@
+- test two way bindings in IE (value may not work)
 - only add bindings the first time a component is rendered
 - do a loop's bindings double if you replace the list?
 - deeply nested objects
