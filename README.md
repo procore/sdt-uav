@@ -1,6 +1,12 @@
 ![uav logo](https://uav.js.org/images/uav.small.png)
 
-`uav` is a JavaScript view library for developers who are skeptical of unnecessary complexity. 
+`uav` is a JavaScript view library for developers who are skeptical of unnecessary complexity.
+
+* It's reactive. You just change your data, and the view updates accordingly.
+* It's simple. The syntax is minimal; there are no dependencies or fancy toolchains.
+* It's small. Less than 3KB gzipped.
+
+Table of contents:
 
 * [Hello World](#hello-world)
 * [Todo App](#todo-app)
@@ -14,7 +20,7 @@
 * [Passing Data to Children](#passing-data-to-children)
 * [Creating a Model](#creating-a-model)
 * [Binding HTML](#binding-html)
-* [uav-attr](#uav-attr)
+* [u-attr](#u-attr)
 * [DOM Access](#dom-access)
 * [Two Way Data Binding](#two-way-data-binding)
 * [Performance Notes](#performance-notes)
@@ -41,7 +47,7 @@ component.message = 'Goodbye, world.';
 
 ## Todo App
 
-[Click here for the live example](http://jsfiddle.net/t16bzg3m/13/)
+[Click here for the live example](http://jsfiddle.net/t16bzg3m/14/)
 
 ## Creating a Component
 
@@ -49,13 +55,28 @@ component.message = 'Goodbye, world.';
 
 Arguments:
 - `template` (String or Element): An HTML template. Must have exactly one root node.
-- `model` (Object): A view model. Optional.
+- `model` (Object): A view model.
 - `container` (String or Element): The element in which to render the component. Optional.
 - `callback` (Function): A function to call after the initial render. Passed the component's root node. Optional.
 
 Returns the model.
 
-Changes to existing properties on the model will trigger an optimized re-render. Only the smallest DOM change possible will occur, down to the level of updating a single element attribute or text node. This is accomplished without any DOM diffing, because uav constructs a tree of closures that know exactly what needs to be updated whenever a particular property is changed.
+Changes to existing properties on the model will trigger an optimized re-render. Only the smallest DOM change possible will occur, down to the level of updating a single element attribute or text node. 
+
+It is recommended to write your templates using ES6 template strings because A) it provides the opportunity to interpolate data without binding it, using the native template `${variable}` syntax, and B) it's easier to remove unnecessary whitespace in your templates during a build step. That said, you can also define templates within your HTML, and pass a DOM element instead of a template string to `uav.component`:
+
+```
+<script type="template" id="template">
+<h1>{content}</h1>
+</script>
+<script>
+const template = uav('#template');
+
+uav.component(template, {
+    content: 'Hello, world!'
+}, '#app');
+</script>
+```
 
 ## Template Expressions
 
@@ -74,7 +95,7 @@ By default, uav expressions use `{curly}` notation. Any browser-supported JavaSc
 ```
 uav.component(
     `<div>This is a content expression: {content}</div>`,
-    { content: 'foo' },
+    { content: 'foo' }
 );
 ```
 
@@ -123,7 +144,7 @@ You can set a variable for the index of the current item by adding a comma and a
 
 ```
 uav.component(`
-    <ul u-loop="items as item, index">
+    <ul u-for="items as item, index">
         <li class="item-{index}">{item}</li>
     </ul>
 `, {
@@ -145,13 +166,12 @@ Things you may wonder about:
 - Properties of the parent model are available within a loop.
 - Like a component, a loop's content must have one root node.
 - Array methods that modify the array like `push` and `splice` will trigger a render.
-- Curly braces are optional in the `u-loop` attribute, since we know the values will always be a template expression.
 
 ### Events
 
 ```
 uav.component(
-    `<button onclick="{click}">Click me</button>`,
+    `<button u-onclick="{click}">Click me</button>`,
     { click: e => console.log(e) }
 );
 ```
@@ -160,13 +180,13 @@ Like any expression, you can pass data to an event handler:
 
 ```
 uav.component(`
-    <ul uav-loop="items" uav-as="item">
-        <li onclick="{click(item)}">This is {item}</li>
+    <ul u-for="items as item">
+        <li u-onclick="{click(item)}">This is {item}</li>
     </ul>
 `, {
     click: item => e => console.log(item),
     items: [ 'foo', 'bar', 'baz' ]
-})
+});
 ```
 
 ## Child Components
@@ -174,7 +194,9 @@ uav.component(`
 A component can be rendered into other components.
 
 ```
-const child = uav.component(`<h3>I am a child.</h3>`);
+const child = uav.component(`<h3>{message}</h3>`, {
+    message: 'I am a child.'
+});
 
 uav.component(`
     <div>
@@ -231,7 +253,7 @@ Either way, it will render the following:
 </div>
 ```
 
-uav supports swapping child components on the fly. For example, you could call `component.child = someOtherComponent` and the view will update accordingly. Just remember that uav is aggressive about avoiding memory leaks, and will remove any bindings that were attached to the original component before it was replaced. 
+uav supports swapping child components on the fly. For example, you could call `component.child = someOtherComponent` and the view will update accordingly. Just remember that uav is aggressive about avoiding memory leaks, and will remove any bindings that were attached to the original component before it was replaced.
 
 ## Creating a Model
 
@@ -249,24 +271,6 @@ const component = uav.component(
 );
 ```
 
-Note, however, that this can be a code smell. The above component could be more simply written without the `isActive` function: 
-
-```
-const component = uav.component(
-    '<div class="item {active ? 'active' : 'inactive'}"></div>',
-    { active: true }
-);
-```
-
-A pragmatic dev will go further, knowing that it is never necessary to define two different CSS classes describing boolean states:
-
-```
-const component = uav.component(
-    '<div class="item {active}"></div>',
-    { active: true }
-);
-```
-
 ### Binding HTML
 To render an HTML string as a DOM element, you can use `uav.parse()`.
 
@@ -277,13 +281,13 @@ uav.component(
 });
 ```
 
-## uav-attr
+## u-attr
 
-Use the `uav-attr` attribute to bind a boolean attribute on an element.
+Use the `u-attr` attribute to bind a boolean attribute on an element.
 
 ```
 uav.component(
-    `<input type="text" uav-attr="{disabled}">`,
+    `<input type="text" u-attr="{disabled}">`,
     { disabled: true }
 );
 
@@ -295,7 +299,7 @@ Just because these are called boolean attributes doesn't mean they have to bound
 
 ```
 uav.component(
-    `<input type="text" uav-attr="{'aria-' + ariaProp}">`,
+    `<input type="text" u-attr="{'aria-' + ariaProp}">`,
     { ariaProp: 'hidden' }
 );
 
@@ -321,15 +325,11 @@ Get an array of all matched elements:
 
 ## Two Way Data Binding
 
-Two way binding is cool, but is only applicable to form interfaces, and can encourage lazy coding practices. Furthermore, it requires creating `oninput` event listeners behind the scenes, when often the use case only requires a `change` or `submit` listener. For these reasons it is included as a separate file, `uav-bind.js`. 
-
-After including this file, any HTML input types that support the `value` property can be two-way bound using the `uav-bind` attribute. This means that when a user changes the value of any input element, the model will automatically update to reflect the new value, and if the model property changes, the input's value will update accordingly.
-
-> To import `uav-bind.js` using commonjs or es6 modules, import the path `uav/dist/uav-bind`.
+Use the `u-bind` attribute to two-way bind an input, select, or textarea to a model property. Whenever the user changes the value of the input, the property will be updated. Whenever you programatically change the property, the input's value will be updated.
 
 ```
 uav.component(
-    `<input type="text" uav-bind="value"/>`,
+    `<input type="text" u-bind="value"/>`,
     { value: 'hi there' }
 );
 ```
@@ -338,16 +338,16 @@ Because checkbox inputs describe a list of selected items, they can only be boun
 
 ```
 uav.component(`
-    <input type="checkbox" uav-bind="items" value="1" name="check">1<br>
-    <input type="checkbox" uav-bind="items" value="2" name="check">2<br>
-    <input type="checkbox" uav-bind="items" value="3" name="check">3<br>`, {
+    <form>
+        <input type="checkbox" u-bind="items" value="1">1
+        <input type="checkbox" u-bind="items" value="2">2
+        <input type="checkbox" u-bind="items" value="3">3
+    </form>`, {
     items: [1, 2]
 });
 ```
 
 [See a live demo of two way binding](http://jsfiddle.net/ap7cp5eq/1/)
-
-> `uav-bind.js` is 0.5KB compressed. 
 
 ## Performance Notes
 
@@ -380,9 +380,4 @@ Using multiline template strings creates unnecessary whitespace in your JavaScri
 
 ## Browser Compatibility
 
-IE9+.
-
-## Coming Soon
-
-- uav-router: The simplest routing solution for single page apps.
-- uav-server: Render your uav apps from Node to make them search-engine friendly.
+Modern browsers and IE9+.
