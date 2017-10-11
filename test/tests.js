@@ -496,4 +496,24 @@ describe('uav', () => {
 
     });
 
+    it('should recursively copy bindings', () => {
+
+        const component = uav.component('<div>{one.two.three}</div>', {
+            one: {
+                two: {
+                    three: 4
+                }
+            }
+        });
+
+        component.one = {
+            two: {
+                three: 5
+            }
+        };
+
+        expect(component.one.two._uav.three).toBeDefined();
+
+    });
+
 });

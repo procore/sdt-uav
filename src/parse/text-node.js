@@ -2,7 +2,14 @@ import uav from '../uav';
 import util from '../util';
 import parseExpression from './expression';
 
-function bindTextNode(_node, steps, expression) {
+/**
+ * Bind a text node to an expression.
+ * 
+ * @param  {Array} steps       - rendering instructions
+ * @param  {String} expression - the template expression
+ * @return {undefined}
+ */
+function bindTextNode(steps, expression) {
     
     const evaluate = parseExpression(expression);
 
@@ -48,6 +55,16 @@ function bindTextNode(_node, steps, expression) {
 
 }
 
+/**
+ * Parse and bind a text node. Because
+ * an expression can contain a child component
+ * or an HTML element, we need to create an individual
+ * text node for each expression.
+ * 
+ * @param  {Element} node - the text node
+ * @param  {Array} steps  - rendering instructions
+ * @return {undefined}
+ */
 function parseTextNode(node, steps) {
 
     const parts = node.textContent.split(uav.expRX);
@@ -62,7 +79,7 @@ function parseTextNode(node, steps) {
 
                 if (part.match(uav.expRX)) {
 
-                    bindTextNode(newNode, steps, util.stripTags(part));
+                    bindTextNode(steps, util.stripTags(part));
 
                 } else {
 

@@ -4,6 +4,14 @@ import uav from '../uav';
 import parseElement from './element';
 import model from '../model';
 
+/**
+ * Bind the contents of an array to a template.
+ * 
+ * @param  {Object} attribute - {name, value}
+ * @param  {Array} steps      - rendering instructions
+ * @param  {Element} node     - the parent of the loop
+ * @return {undefined}
+ */
 export default (attribute, steps, node) => {
 
     const loopVars = util.stripTags(attribute.value).split(' as ');
@@ -32,16 +40,19 @@ export default (attribute, steps, node) => {
 
         function renderChild(item, i) {
 
-            return util.render(childSteps, state.vm, Object.assign({}, state.ctx, {
-                [as]: item,
-                [index]: i
-            }));
+            const ctx = state.ctx ? Object.create(state.ctx) : {};
+
+            ctx[as] = item;
+
+            ctx[index] = i;
+
+            return util.render(childSteps, state.vm, ctx);
 
         }
 
         const loop = {
             
-            append(item, i) {
+            add(item, i) {
 
                 const child = renderChild(item, i);
 
@@ -85,7 +96,7 @@ export default (attribute, steps, node) => {
 
         list._loops.push(loop);
 
-        list.forEach(loop.append);
+        list.forEach(loop.add);
 
     };
 

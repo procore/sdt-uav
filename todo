@@ -1,10 +1,3 @@
-- test two way bindings in IE (value may not work)
-- only add bindings the first time a component is rendered
-- do a loop's bindings double if you replace the list?
-- deeply nested objects
-- unit tests
-- comments
-- benchmark
-- consider batch updates / async rendering
+- checkbox binding doesn't work right
 - uav-router
 - uav-server

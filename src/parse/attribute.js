@@ -4,6 +4,14 @@ import parseExpression from './expression';
 import loop from './loop';
 import twoWayBind from './two-way-bind';
 
+/**
+ * Parse and bind a boolean attribute, i.e.:
+ * <input type="text" u-attr={disabled}/>
+ * 
+ * @param  {Object} attribute - {name, value}
+ * @param  {Array} steps      - rendering instructions
+ * @return {undefined}
+ */
 function bindBooleanAttribute(attribute, steps) {
 
     let property = util.stripTags(attribute.value);
@@ -44,6 +52,14 @@ function bindBooleanAttribute(attribute, steps) {
 
 }
 
+/**
+ * Parse and bind any expressions in an attribute.
+ * There may be multiple expressions in one attribute.
+ * 
+ * @param  {Object} attribute - {name, value}
+ * @param  {Array} steps      - rendering instructions
+ * @return {undefined}
+ */
 function bindAttribute(attribute, steps) {
 
     const expressions = attribute.value.match(uav.expRX);
@@ -94,6 +110,15 @@ function bindAttribute(attribute, steps) {
 
 }
 
+/**
+ * Check to see if an attribute should be parsed,
+ * and if so, whether it is a special case.
+ * 
+ * @param  {Object} attribute - {name, value}
+ * @param  {Array} steps      - rendering instructions
+ * @param  {Element} node     - the node which has this attribute
+ * @return {undefined}
+ */
 function parseAttribute(attribute, steps, node) {
 
     if (attribute.name.indexOf('u-') === 0) {

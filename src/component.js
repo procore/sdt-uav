@@ -16,7 +16,7 @@ import uav from './uav';
  */
 export default function(html, vm, parent) {
 
-    const node = html.tagName ? html : parseHtml(html);
+    const node = parseHtml(html.innerHTML || html);
 
     const steps = parseElement(node);
 

@@ -74,7 +74,9 @@ const util = {
      */
     bindStep(binding, state) {
 
-        uav.state = Object.assign({}, state, {binding});
+        uav.state = Object.create(state);
+
+        uav.state.binding = binding;
 
         binding(uav.state);
 

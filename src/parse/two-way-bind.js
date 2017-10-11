@@ -2,6 +2,13 @@ import util from '../util';
 import parseExpression from './expression';
 import uav from '../uav';
 
+/**
+ * Two-way bind a radio input to an expression.
+ * 
+ * @param  {Array} steps       - rendering instructions
+ * @param  {Function} evaluate - the curried expression evaluator
+ * @return {undefined}
+ */
 function bindRadio(steps, evaluate) {
 
     const binding = el => state => {
@@ -30,6 +37,16 @@ function bindRadio(steps, evaluate) {
 
 }
 
+/**
+ * Two-way bind a checkbox input to an expression.
+ *
+ * Individual checkboxes can be bound to booleans, or
+ * groups of checkboxes can be bound to arrays.
+ * 
+ * @param  {Array} steps       - rendering instructions
+ * @param  {Function} evaluate - the curried expression evaluator
+ * @return {undefined}
+ */
 function bindCheckbox(steps, evaluate) {
 
     const binding = el => state => {
@@ -87,7 +104,7 @@ function bindCheckbox(steps, evaluate) {
             const updateCheckbox = () => binding(state.el)(state);
              
             value._loops.push({
-                append: updateCheckbox,
+                add: updateCheckbox,
                 remove: updateCheckbox,
                 replace: updateCheckbox
             });
@@ -100,6 +117,13 @@ function bindCheckbox(steps, evaluate) {
 
 }
 
+/**
+ * Two-way bind an input to an expression.
+ * 
+ * @param  {Array} steps       - rendering instructions
+ * @param  {Function} evaluate - the curried expression evaluator
+ * @return {undefined}
+ */
 function bindInput(steps, evaluate) {
 
     const binding = el => state => {
@@ -128,6 +152,14 @@ function bindInput(steps, evaluate) {
 
 }
 
+/**
+ * Two-way bind an input to an expression.
+ * 
+ * @param  {Object} attribute - {name, value}
+ * @param  {Array} steps      - rendering instructions
+ * @param  {Element} node     - the input
+ * @return {undefined}
+ */
 export default (attribute, steps, node) => {
 
     const evaluate = parseExpression(util.stripTags(attribute.value));

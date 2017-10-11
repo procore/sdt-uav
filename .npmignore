@@ -3,4 +3,5 @@
 build.sh
 CNAME
 index.html
-manifesto
+karma.conf.js
+package-lock.json

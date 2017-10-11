@@ -2,9 +2,16 @@ import util from './util';
 import uav from './uav';
 import bindArrayMethods from './bind-array-methods';
 
+/**
+ * Test an object for eligibility to be given
+ * view model getters and setters
+ * 
+ * @param  {Object} data - the object to test
+ * @return {Boolean}
+ */
 function notVmEligible(data) {
 
-    return !data || typeof data !== 'object' || data._uav || data.tagName;
+    return !data || typeof data !== 'object' || data.tagName;
 
 }
 
@@ -44,7 +51,7 @@ function copyBindings(from, to) {
  */
 export default function model(data) {
 
-    if (notVmEligible(data)) {
+    if (notVmEligible(data) || data._uav) {
 
         return data;
 
@@ -76,6 +83,10 @@ export default function model(data) {
 
                 vm._uav[key].push(state);
 
+                /**
+                 * Save a closure that will remove this binding,
+                 * to be run if the node is removed or replaced.
+                 */
                 uav.node._uav.push(() => {
 
                     if (vm._uav[key]) {
@@ -92,6 +103,10 @@ export default function model(data) {
 
             }
 
+            /**
+             * Saving a reference to the last accessed model
+             * and property name is necessary for two-way binding.
+             */
             uav.lastAccessed = {vm, key};
 
             return data[key];
@@ -122,11 +137,7 @@ export default function model(data) {
 
                 if (vm._uav[key]) {
 
-                    vm._uav[key].forEach(state =>{
-
-                        state.binding(state);
-
-                    });
+                    vm._uav[key].forEach(state => state.binding(state));
 
                 }
 

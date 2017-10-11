@@ -1,5 +1,3 @@
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-
 (function () {
     'use strict';
 
@@ -123,7 +121,9 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
          */
         bindStep: function bindStep(binding, state) {
 
-            uav.state = Object.assign({}, state, { binding: binding });
+            uav.state = Object.create(state);
+
+            uav.state.binding = binding;
 
             binding(uav.state);
 
@@ -158,6 +158,14 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         }
     };
 
+    /**
+     * Convert an HTML string into an HTML tree.
+     * Must have one root node.
+     * 
+     * @param  {String} html - the string to convert
+     * @param  {Element} parent - the element's parent (optional).
+     * @return {Element}
+     */
     var parseHtml = function parseHtml(html, parent) {
 
         var el = parent ? parent.cloneNode() : document.createElement('div');
@@ -189,18 +197,6 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
             var startIndex = list.length;
 
-            // args.forEach(arg => list._watch(arg, list.length));
-
-            // list._loops.forEach(loop => {
-
-            //     args.forEach((arg, i) => {
-
-            //         loop.append(arg, startIndex + i);
-
-            //     });
-
-            // });
-
             Array.prototype.push.apply(list, args);
 
             var _loop = function _loop(i) {
@@ -208,7 +204,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
                 list._watch(list[i], i);
 
                 list._loops.forEach(function (loop) {
-                    return loop.append(list[i], i);
+                    return loop.add(list[i], i);
                 });
             };
 
@@ -255,7 +251,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
                 list._watch(list[i], i);
 
                 list._loops.forEach(function (loop) {
-                    return loop.append(list[i], i);
+                    return loop.add(list[i], i);
                 });
             };
 
@@ -291,7 +287,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
                 list._watch(list[i], i);
 
                 list._loops.forEach(function (loop) {
-                    return loop.append(list[i], i);
+                    return loop.add(list[i], i);
                 });
             };
 
@@ -303,9 +299,16 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         });
     };
 
+    /**
+     * Test an object for eligibility to be given
+     * view model getters and setters
+     * 
+     * @param  {Object} data - the object to test
+     * @return {Boolean}
+     */
     function notVmEligible(data) {
 
-        return !data || typeof data !== 'object' || data._uav || data.tagName;
+        return !data || typeof data !== 'object' || data.tagName;
     }
 
     /**
@@ -341,7 +344,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
      */
     function model(data) {
 
-        if (notVmEligible(data)) {
+        if (notVmEligible(data) || data._uav) {
 
             return data;
         }
@@ -371,6 +374,10 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
                     vm._uav[key].push(state);
 
+                    /**
+                     * Save a closure that will remove this binding,
+                     * to be run if the node is removed or replaced.
+                     */
                     uav.node._uav.push(function () {
 
                         if (vm._uav[key]) {
@@ -384,6 +391,10 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
                     });
                 }
 
+                /**
+                 * Saving a reference to the last accessed model
+                 * and property name is necessary for two-way binding.
+                 */
                 uav.lastAccessed = { vm: vm, key: key };
 
                 return data[key];
@@ -414,8 +425,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
                     if (vm._uav[key]) {
 
                         vm._uav[key].forEach(function (state) {
-
-                            state.binding(state);
+                            return state.binding(state);
                         });
                     }
                 }
@@ -438,6 +448,18 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         return vm;
     }
 
+    /**
+     * Convert a template expression into a function that
+     * can be called with a view model as well as a parent
+     * execution context (for template loops).
+     *
+     * Note that this approach does not have the security
+     * concerns of eval(), because the template expressions
+     * do not have access to the execution context.
+     * 
+     * @param  {String} expression - the template expression
+     * @return {Function}
+     */
     var parseExpression = function parseExpression(expression) {
 
         var evaluator = new Function('with(arguments[0]){with(arguments[1]){return ' + expression + '}}');
@@ -458,6 +480,14 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         };
     };
 
+    /**
+     * Bind the contents of an array to a template.
+     * 
+     * @param  {Object} attribute - {name, value}
+     * @param  {Array} steps      - rendering instructions
+     * @param  {Element} node     - the parent of the loop
+     * @return {undefined}
+     */
     var loop = function loop(attribute, steps, node) {
 
         var loopVars = util.stripTags(attribute.value).split(' as ');
@@ -486,13 +516,18 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
                 uav.state = null;
 
                 function renderChild(item, i) {
-                    var _Object$assign;
 
-                    return util.render(childSteps, state.vm, Object.assign({}, state.ctx, (_Object$assign = {}, _defineProperty(_Object$assign, as, item), _defineProperty(_Object$assign, index, i), _Object$assign)));
+                    var ctx = state.ctx ? Object.create(state.ctx) : {};
+
+                    ctx[as] = item;
+
+                    ctx[index] = i;
+
+                    return util.render(childSteps, state.vm, ctx);
                 }
 
                 var loop = {
-                    append: function append(item, i) {
+                    add: function add(item, i) {
 
                         var child = renderChild(item, i);
 
@@ -527,7 +562,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
                 list._loops.push(loop);
 
-                list.forEach(loop.append);
+                list.forEach(loop.add);
             };
         };
 
@@ -537,6 +572,13 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         });
     };
 
+    /**
+     * Two-way bind a radio input to an expression.
+     * 
+     * @param  {Array} steps       - rendering instructions
+     * @param  {Function} evaluate - the curried expression evaluator
+     * @return {undefined}
+     */
     function bindRadio(steps, evaluate) {
 
         var binding = function binding(el) {
@@ -563,6 +605,16 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         });
     }
 
+    /**
+     * Two-way bind a checkbox input to an expression.
+     *
+     * Individual checkboxes can be bound to booleans, or
+     * groups of checkboxes can be bound to arrays.
+     * 
+     * @param  {Array} steps       - rendering instructions
+     * @param  {Function} evaluate - the curried expression evaluator
+     * @return {undefined}
+     */
     function bindCheckbox(steps, evaluate) {
 
         var binding = function binding(el) {
@@ -616,7 +668,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
                 };
 
                 value._loops.push({
-                    append: updateCheckbox,
+                    add: updateCheckbox,
                     remove: updateCheckbox,
                     replace: updateCheckbox
                 });
@@ -626,6 +678,13 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         });
     }
 
+    /**
+     * Two-way bind an input to an expression.
+     * 
+     * @param  {Array} steps       - rendering instructions
+     * @param  {Function} evaluate - the curried expression evaluator
+     * @return {undefined}
+     */
     function bindInput(steps, evaluate) {
 
         var binding = function binding(el) {
@@ -652,6 +711,14 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         });
     }
 
+    /**
+     * Two-way bind an input to an expression.
+     * 
+     * @param  {Object} attribute - {name, value}
+     * @param  {Array} steps      - rendering instructions
+     * @param  {Element} node     - the input
+     * @return {undefined}
+     */
     var twoWayBind = function twoWayBind(attribute, steps, node) {
 
         var evaluate = parseExpression(util.stripTags(attribute.value));
@@ -672,6 +739,14 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         }
     };
 
+    /**
+     * Parse and bind a boolean attribute, i.e.:
+     * <input type="text" u-attr={disabled}/>
+     * 
+     * @param  {Object} attribute - {name, value}
+     * @param  {Array} steps      - rendering instructions
+     * @return {undefined}
+     */
     function bindBooleanAttribute(attribute, steps) {
 
         var property = util.stripTags(attribute.value);
@@ -708,6 +783,14 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         });
     }
 
+    /**
+     * Parse and bind any expressions in an attribute.
+     * There may be multiple expressions in one attribute.
+     * 
+     * @param  {Object} attribute - {name, value}
+     * @param  {Array} steps      - rendering instructions
+     * @return {undefined}
+     */
     function bindAttribute(attribute, steps) {
 
         var expressions = attribute.value.match(uav.expRX);
@@ -756,6 +839,15 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         });
     }
 
+    /**
+     * Check to see if an attribute should be parsed,
+     * and if so, whether it is a special case.
+     * 
+     * @param  {Object} attribute - {name, value}
+     * @param  {Array} steps      - rendering instructions
+     * @param  {Element} node     - the node which has this attribute
+     * @return {undefined}
+     */
     function parseAttribute(attribute, steps, node) {
 
         if (attribute.name.indexOf('u-') === 0) {
@@ -795,7 +887,14 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         }
     }
 
-    function bindTextNode(_node, steps, expression) {
+    /**
+     * Bind a text node to an expression.
+     * 
+     * @param  {Array} steps       - rendering instructions
+     * @param  {String} expression - the template expression
+     * @return {undefined}
+     */
+    function bindTextNode(steps, expression) {
 
         var evaluate = parseExpression(expression);
 
@@ -836,6 +935,16 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         });
     }
 
+    /**
+     * Parse and bind a text node. Because
+     * an expression can contain a child component
+     * or an HTML element, we need to create an individual
+     * text node for each expression.
+     * 
+     * @param  {Element} node - the text node
+     * @param  {Array} steps  - rendering instructions
+     * @return {undefined}
+     */
     function parseTextNode(node, steps) {
 
         var parts = node.textContent.split(uav.expRX);
@@ -850,7 +959,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
                     if (part.match(uav.expRX)) {
 
-                        bindTextNode(newNode, steps, util.stripTags(part));
+                        bindTextNode(steps, util.stripTags(part));
                     } else {
 
                         steps.push(function (state) {
@@ -875,6 +984,14 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         }
     }
 
+    /**
+     * Walk an element's attributes and children to check
+     * for template expressions and construct a list of
+     * steps for efficiently re-rendering the component.
+     * 
+     * @param  {Element} node - the node to walk
+     * @return {Array} steps  - rendering instructions
+     */
     function parseElement(node) {
 
         var steps = [];
@@ -931,7 +1048,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
         var _arguments = arguments;
 
 
-        var node = html.tagName ? html : parseHtml(html);
+        var node = parseHtml(html.innerHTML || html);
 
         var steps = parseElement(node);
 

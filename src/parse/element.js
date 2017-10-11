@@ -2,6 +2,14 @@ import util from '../util';
 import parseAttribute from './attribute';
 import parseTextNode from './text-node';
 
+/**
+ * Walk an element's attributes and children to check
+ * for template expressions and construct a list of
+ * steps for efficiently re-rendering the component.
+ * 
+ * @param  {Element} node - the node to walk
+ * @return {Array} steps  - rendering instructions
+ */
 function parseElement(node) {
 
     const steps = [];
