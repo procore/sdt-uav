@@ -102,7 +102,11 @@ export default (attribute, steps, node) => {
 
     steps.push(state => {
 
-        return util.bindStep(binding(state.el), state);
+        const _binding = binding(state.el);
+
+        _binding.isLoop = true;
+
+        return util.bindStep(_binding, state);
 
     });
 

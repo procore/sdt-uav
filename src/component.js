@@ -18,6 +18,12 @@ export default function(html, vm, parent) {
 
     const node = parseHtml(html.innerHTML || html);
 
+    if (!vm) {
+
+        return node;
+
+    }
+
     const steps = parseElement(node);
 
     vm = model(vm);

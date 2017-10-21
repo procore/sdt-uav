@@ -1,3 +1,4 @@
+- arrays lose bindings if they ever hit length zero
 - checkbox binding doesn't work right
 - uav-router
 - uav-server

@@ -181,14 +181,59 @@
     };
 
     /**
-     * Wrap all array methods that modify the length
-     * of the array, so that the appropriate cleanup
-     * or binding is triggered.
+     * Wrap all array methods that modify the array,
+     * so that the appropriate cleanup or binding 
+     * is triggered.
      * 
      * @param  {Array} list - the array to modify
+     * @param {Function} runBindings - run any bindings to the array that aren't loops
      * @return {undefined}
      */
-    var bindArrayMethods = function bindArrayMethods(list) {
+
+    var bindArrayMethods = function bindArrayMethods(list, runBindings) {
+
+        util.defineProp(list, 'fill', function (value) {
+            var start = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+            var end = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : list.length;
+
+
+            uav._pause = true;
+
+            while (start < 0) {
+
+                start += list.length;
+            }
+
+            while (end < 0) {
+
+                end += list.length;
+            }
+
+            var bindings = list._uav[0];
+
+            Array.prototype.fill.apply(list, [value, start, end]);
+
+            var _loop = function _loop(i) {
+
+                list._watch(value, i);
+
+                list._loops.forEach(function (loop) {
+                    return loop.add(value, i);
+                });
+
+                list._uav[i] = bindings;
+            };
+
+            for (var i = list.length; i < end; i++) {
+                _loop(i);
+            }
+
+            runBindings();
+
+            delete uav._pause;
+
+            return list;
+        });
 
         util.defineProp(list, 'push', function () {
             for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
@@ -197,54 +242,9 @@
 
             var startIndex = list.length;
 
+            var bindings = list._uav[0];
+
             Array.prototype.push.apply(list, args);
-
-            var _loop = function _loop(i) {
-
-                list._watch(list[i], i);
-
-                list._loops.forEach(function (loop) {
-                    return loop.add(list[i], i);
-                });
-            };
-
-            for (var i = startIndex; i < startIndex + args.length; i++) {
-                _loop(i);
-            }
-
-            return list;
-        });
-
-        util.defineProp(list, 'pop', function () {
-
-            list._loops.forEach(function (loop) {
-                return loop.remove(list.length - 1);
-            });
-
-            return Array.prototype.pop.call(list);
-        });
-
-        util.defineProp(list, 'shift', function () {
-
-            list._loops.forEach(function (loop) {
-                return loop.remove(0);
-            });
-
-            return Array.prototype.shift.call(list);
-        });
-
-        util.defineProp(list, 'splice', function () {
-            for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-                args[_key2] = arguments[_key2];
-            }
-
-            var originalLength = list.length;
-
-            var start = args.shift();
-
-            var deleteCount = args.shift();
-
-            var result = Array.prototype.splice.apply(list, [start, deleteCount].concat(args));
 
             var _loop2 = function _loop2(i) {
 
@@ -253,22 +253,121 @@
                 list._loops.forEach(function (loop) {
                     return loop.add(list[i], i);
                 });
+
+                list._uav[i] = bindings;
             };
 
-            for (var i = originalLength; i < list.length; i++) {
+            for (var i = startIndex; i < startIndex + args.length; i++) {
                 _loop2(i);
             }
 
+            runBindings();
+
+            return list;
+        });
+
+        util.defineProp(list, 'pop', function () {
+
+            var lastIndex = list.length - 1;
+
+            list._loops.forEach(function (loop) {
+                return loop.remove(lastIndex);
+            });
+
+            var result = Array.prototype.pop.call(list);
+
+            delete list._uav[lastIndex];
+
+            runBindings();
+
+            return result;
+        });
+
+        util.defineProp(list, 'reverse', function () {
+
+            uav._pause = true;
+
+            var result = Array.prototype.reverse.call(list);
+
+            runBindings();
+
+            delete uav._pause;
+
+            return result;
+        });
+
+        util.defineProp(list, 'shift', function () {
+
+            list._loops.forEach(function (loop) {
+                return loop.remove(0);
+            });
+
+            var result = Array.prototype.shift.call(list);
+
+            delete list._uav[0];
+
+            runBindings();
+
+            return result;
+        });
+
+        util.defineProp(list, 'sort', function (compare) {
+
+            uav._pause = true;
+
+            var result = Array.prototype.sort.call(list, compare);
+
+            runBindings();
+
+            delete uav._pause;
+
+            return result;
+        });
+
+        util.defineProp(list, 'splice', function () {
+            for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+                args[_key2] = arguments[_key2];
+            }
+
+            uav._pause = true;
+
+            var originalLength = list.length;
+
+            var bindings = list._uav[0];
+
+            var result = Array.prototype.splice.apply(list, [args.shift(), args.shift()].concat(args));
+
             var _loop3 = function _loop3(i) {
+
+                list._watch(list[i], i);
+
+                list._loops.forEach(function (loop) {
+                    return loop.add(list[i], i);
+                });
+
+                list._uav[i] = bindings;
+            };
+
+            for (var i = originalLength; i < list.length; i++) {
+                _loop3(i);
+            }
+
+            var _loop4 = function _loop4(i) {
 
                 list._loops.forEach(function (loop) {
                     return loop.remove(i);
                 });
+
+                delete list._uav[i];
             };
 
             for (var i = list.length; i < originalLength; i++) {
-                _loop3(i);
+                _loop4(i);
             }
+
+            runBindings();
+
+            delete uav._pause;
 
             return result;
         });
@@ -280,20 +379,26 @@
 
             var originalLength = list.length;
 
+            var bindings = list._uav[0];
+
             Array.prototype.unshift.apply(list, args);
 
-            var _loop4 = function _loop4(i) {
+            var _loop5 = function _loop5(i) {
 
                 list._watch(list[i], i);
 
                 list._loops.forEach(function (loop) {
                     return loop.add(list[i], i);
                 });
+
+                list._uav[i] = bindings;
             };
 
             for (var i = originalLength; i < list.length; i++) {
-                _loop4(i);
+                _loop5(i);
             }
+
+            runBindings();
 
             return list;
         });
@@ -342,7 +447,7 @@
      * @param  {Object|Array} data - the source for the model
      * @return {Object}            - the bound model
      */
-    function model(data) {
+    function model(data, parent, parentKey) {
 
         if (notVmEligible(data) || data._uav) {
 
@@ -357,7 +462,15 @@
 
             util.defineProp(vm, '_loops', []);
 
-            bindArrayMethods(vm);
+            bindArrayMethods(vm, function () {
+
+                if (parent && parent._uav[parentKey]) {
+
+                    parent._uav[parentKey].forEach(function (state) {
+                        return state.binding.isLoop || state.binding(state);
+                    });
+                }
+            });
         }
 
         util.defineProp(vm, '_uav', {});
@@ -382,9 +495,7 @@
 
                         if (vm._uav[key]) {
 
-                            var index = vm._uav[key].indexOf(state);
-
-                            vm._uav[key].splice(index, 1);
+                            vm._uav[key].splice(vm._uav[key].indexOf(state), 1);
                         }
 
                         state = null;
@@ -395,7 +506,7 @@
                  * Saving a reference to the last accessed model
                  * and property name is necessary for two-way binding.
                  */
-                uav.lastAccessed = { vm: vm, key: key };
+                uav.last = { vm: vm, key: key };
 
                 return data[key];
             }
@@ -406,7 +517,7 @@
 
                     var alreadyVM = value && value._uav;
 
-                    value = model(value);
+                    value = model(value, vm, key);
 
                     if (!alreadyVM && data[key] && data[key]._uav) {
 
@@ -422,16 +533,19 @@
                         });
                     }
 
-                    if (vm._uav[key]) {
+                    if (!uav._pause) {
 
-                        vm._uav[key].forEach(function (state) {
-                            return state.binding(state);
-                        });
+                        if (vm._uav[key]) {
+
+                            vm._uav[key].forEach(function (state) {
+                                return state.binding(state);
+                            });
+                        }
                     }
                 }
             }
 
-            data[key] = model(val);
+            data[key] = model(val, vm, key);
 
             Object.defineProperty(vm, key, {
                 get: get,
@@ -568,7 +682,11 @@
 
         steps.push(function (state) {
 
-            return util.bindStep(binding(state.el), state);
+            var _binding = binding(state.el);
+
+            _binding.isLoop = true;
+
+            return util.bindStep(_binding, state);
         });
     };
 
@@ -594,9 +712,9 @@
 
                 evaluate(state.vm, state.ctx);
 
-                uav.lastAccessed.vm[uav.lastAccessed.key] = state.el.value;
+                uav.last.vm[uav.last.key] = state.el.value;
 
-                uav.lastAccessed = null;
+                uav.last = null;
             });
 
             util.bindStep(binding(state.el), state);
@@ -621,6 +739,8 @@
             return function (state) {
 
                 var value = evaluate(state.vm, state.ctx);
+
+                uav.state = null;
 
                 if (Array.isArray(value)) {
 
@@ -651,10 +771,10 @@
                     }
                 } else {
 
-                    uav.lastAccessed.vm[uav.lastAccessed.key] = state.el.checked;
+                    uav.last.vm[uav.last.key] = state.el.checked;
                 }
 
-                uav.lastAccessed = null;
+                uav.last = null;
 
                 return state;
             });
@@ -700,9 +820,9 @@
 
                 evaluate(state.vm, state.ctx);
 
-                uav.lastAccessed.vm[uav.lastAccessed.key] = state.el.value;
+                uav.last.vm[uav.last.key] = state.el.value;
 
-                uav.lastAccessed = null;
+                uav.last = null;
             });
 
             util.bindStep(binding(state.el), state);
@@ -1050,6 +1170,11 @@
 
         var node = parseHtml(html.innerHTML || html);
 
+        if (!vm) {
+
+            return node;
+        }
+
         var steps = parseElement(node);
 
         vm = model(vm);
@@ -1073,7 +1198,7 @@
             }
         }
 
-        var _loop5 = function _loop5(i) {
+        var _loop6 = function _loop6(i) {
 
             if (typeof _arguments[i] === 'function') {
 
@@ -1086,9 +1211,9 @@
         };
 
         for (var i = 1; i < arguments.length; i++) {
-            var _ret5 = _loop5(i);
+            var _ret6 = _loop6(i);
 
-            if (_ret5 === 'break') break;
+            if (_ret6 === 'break') break;
         }
 
         return vm;

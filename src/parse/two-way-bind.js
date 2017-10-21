@@ -23,9 +23,9 @@ function bindRadio(steps, evaluate) {
 
             evaluate(state.vm, state.ctx);
 
-            uav.lastAccessed.vm[uav.lastAccessed.key] = state.el.value;
+            uav.last.vm[uav.last.key] = state.el.value;
 
-            uav.lastAccessed = null;
+            uav.last = null;
 
         });
 
@@ -52,6 +52,8 @@ function bindCheckbox(steps, evaluate) {
     const binding = el => state => {
 
         const value = evaluate(state.vm, state.ctx);
+
+        uav.state = null;
 
         if (Array.isArray(value)) {
 
@@ -87,11 +89,11 @@ function bindCheckbox(steps, evaluate) {
 
             } else {
 
-                uav.lastAccessed.vm[uav.lastAccessed.key] = state.el.checked;
+                uav.last.vm[uav.last.key] = state.el.checked;
 
             }
 
-            uav.lastAccessed = null;
+            uav.last = null;
 
             return state;
 
@@ -138,9 +140,9 @@ function bindInput(steps, evaluate) {
 
             evaluate(state.vm, state.ctx);
 
-            uav.lastAccessed.vm[uav.lastAccessed.key] = state.el.value;
+            uav.last.vm[uav.last.key] = state.el.value;
 
-            uav.lastAccessed = null;
+            uav.last = null;
 
         });
 

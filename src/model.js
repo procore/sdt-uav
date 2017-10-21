@@ -49,7 +49,7 @@ function copyBindings(from, to) {
  * @param  {Object|Array} data - the source for the model
  * @return {Object}            - the bound model
  */
-export default function model(data) {
+export default function model(data, parent, parentKey) {
 
     if (notVmEligible(data) || data._uav) {
 
@@ -65,7 +65,15 @@ export default function model(data) {
 
         util.defineProp(vm, '_loops', []);
 
-        bindArrayMethods(vm);
+        bindArrayMethods(vm, () => {
+
+            if (parent && parent._uav[parentKey]) {
+
+                parent._uav[parentKey].forEach(state => state.binding.isLoop || state.binding(state));
+
+            }
+
+        });
 
     }
 
@@ -91,9 +99,7 @@ export default function model(data) {
 
                     if (vm._uav[key]) {
 
-                        const index = vm._uav[key].indexOf(state);
-
-                        vm._uav[key].splice(index, 1);
+                        vm._uav[key].splice(vm._uav[key].indexOf(state), 1);
 
                     }
 
@@ -107,7 +113,7 @@ export default function model(data) {
              * Saving a reference to the last accessed model
              * and property name is necessary for two-way binding.
              */
-            uav.lastAccessed = {vm, key};
+            uav.last = {vm, key};
 
             return data[key];
 
@@ -119,7 +125,7 @@ export default function model(data) {
 
                 const alreadyVM = value && value._uav;
 
-                value = model(value);
+                value = model(value, vm, key);
 
                 if (!alreadyVM && data[key] && data[key]._uav) {
 
@@ -135,9 +141,13 @@ export default function model(data) {
 
                 }
 
-                if (vm._uav[key]) {
+                if (!uav._pause) {
 
-                    vm._uav[key].forEach(state => state.binding(state));
+                    if (vm._uav[key]) {
+
+                        vm._uav[key].forEach(state => state.binding(state));
+
+                    }
 
                 }
 
@@ -145,7 +155,7 @@ export default function model(data) {
 
         }
 
-        data[key] = model(val);
+        data[key] = model(val, vm, key);
 
         Object.defineProperty(vm, key, {
             get,
