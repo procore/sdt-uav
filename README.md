@@ -1,6 +1,4 @@
-![uav logo](https://uav.js.org/images/uav.small.png)
-
-`uav` is a JavaScript view library for those who are skeptical of unnecessary complexity.
+`uav` is a JavaScript view library for those who are skeptical of complexity.
 
 * It's reactive. You just change your data, and the view updates accordingly.
 * It's simple. The syntax is minimal; there are no dependencies or fancy toolchains.
