@@ -211,7 +211,7 @@ describe('uav', () => {
     it('should support binding html', () => {
 
         const component = uav.component('<div>{html}</div>', {
-            html: uav.parse('<i></i>')
+            html: uav.component('<i></i>')
         });
 
         expect(component._el.firstElementChild.tagName).toBe('I');
