@@ -1,6 +1,6 @@
 ![uav logo](https://uav.js.org/images/uav.small.png)
 
-`uav` is a JavaScript view library for developers who are skeptical of unnecessary complexity.
+`uav` is a JavaScript view library for those who are skeptical of unnecessary complexity.
 
 * It's reactive. You just change your data, and the view updates accordingly.
 * It's simple. The syntax is minimal; there are no dependencies or fancy toolchains.
@@ -20,9 +20,10 @@ Table of contents:
 * [Passing Data to Children](#passing-data-to-children)
 * [Creating a Model](#creating-a-model)
 * [Binding HTML](#binding-html)
-* [u-attr](#u-attr)
+* [Boolean Attributes](#boolean-attributes)
 * [DOM Access](#dom-access)
 * [Two Way Data Binding](#two-way-data-binding)
+* [Script Tag Templates](#script-tag-templates)
 * [Performance Notes](#performance-notes)
 * [Browser Compatibility](#browser-compatibility)
 
@@ -47,7 +48,7 @@ component.message = 'Goodbye, world.';
 
 ## Todo App
 
-[Click here for the live example](http://jsfiddle.net/t16bzg3m/14/)
+[Click here for a live example](http://jsfiddle.net/t16bzg3m/15/)
 
 ## Creating a Component
 
@@ -55,38 +56,23 @@ component.message = 'Goodbye, world.';
 
 Arguments:
 - `template` (String or Element): An HTML template. Must have exactly one root node.
-- `model` (Object): A view model.
+- `model` (Object): A view model. Optional.
 - `container` (String or Element): The element in which to render the component. Optional.
-- `callback` (Function): A function to call after the initial render. Passed the component's root node. Optional.
+- `callback` (Function): A callback that will be passed the component's root node. Optional.
 
-Returns the model.
+Returns the model, if provided. Otherwise returns the component's DOM node.
 
-Changes to existing properties on the model will trigger an optimized re-render. Only the smallest DOM change possible will occur, down to the level of updating a single element attribute or text node. 
-
-It is recommended to write your templates using ES6 template strings because A) it provides the opportunity to interpolate data without binding it, using the native template `${variable}` syntax, and B) it's easier to remove unnecessary whitespace in your templates during a build step. That said, you can also define templates within your HTML, and pass a DOM element instead of a template string to `uav.component`:
-
-```
-<script type="template" id="template">
-<h1>{content}</h1>
-</script>
-<script>
-const template = uav('#template');
-
-uav.component(template, {
-    content: 'Hello, world!'
-}, '#app');
-</script>
-```
+Changes to existing properties on the model will trigger an optimized re-render. Only the smallest DOM change possible will occur based on which properties on the model have changed. 
 
 ## Template Expressions
 
-By default, uav expressions use `{curly}` notation. Any browser-supported JavaScript can be used in an any expression. The result of the expression can be any of the following:
+By default, uav expressions use `{curly}` notation. Any browser-supported JavaScript can be used in an any expression. The result of an expression can be any of the following:
 - String
 - Number
-- Function (for event handlers)
-- Boolean (for simplified class and property bindings)
-- DOM element (don't render untrusted HTML in templates)
-- a uav component
+- Function
+- Boolean
+- DOM element
+- uav component
 - undefined or null (renders an empty string)
 
 > You can change the template tag syntax with `uav.setTag()`. For example, to use `{{mustache}}` notation, call `uav.setTag('{{', '}}')` before creating any components.
@@ -253,7 +239,7 @@ Either way, it will render the following:
 </div>
 ```
 
-uav supports swapping child components on the fly. For example, you could call `component.child = someOtherComponent` and the view will update accordingly. Just remember that uav is aggressive about avoiding memory leaks, and will remove any bindings that were attached to the original component before it was replaced.
+uav supports swapping child components on the fly. For example, you could call `component.child = someOtherComponent` and the view will update accordingly. 
 
 ## Creating a Model
 
@@ -261,18 +247,18 @@ If you want to create a view model before associating it with a template, use `u
 
 ```
 const model = uav.model({
-    active: true,
-    isActive: () => model.active
+    blue: true,
+    redOrBlue: () => model.blue ? 'blue' : 'red'
 });
 
 const component = uav.component(
-    '<div class="item {isActive() ? 'active' : 'inactive'}"></div>', 
+    '<div class="{redOrBlue()}"></div>', 
     model
 );
 ```
 
 ### Binding HTML
-To render an HTML string as a DOM element, you can use `uav.parse()`.
+To render an HTML string as a DOM element, you can use `uav.parse()`. This is equivalent to calling `uav.component()` with only one argument.
 
 ```
 uav.component(
@@ -281,7 +267,7 @@ uav.component(
 });
 ```
 
-## u-attr
+## Boolean Attributes
 
 Use the `u-attr` attribute to bind a boolean attribute on an element.
 
@@ -334,22 +320,40 @@ uav.component(
 );
 ```
 
-Because checkbox inputs describe a list of selected items, they can only be bound to arrays.
+Checkboxes can be bound to arrays or booleans.
 
 ```
 uav.component(`
     <form>
-        <input type="checkbox" u-bind="items" value="1">1
-        <input type="checkbox" u-bind="items" value="2">2
-        <input type="checkbox" u-bind="items" value="3">3
+        <input type="checkbox" u-bind="items" value="1"> 1
+        <input type="checkbox" u-bind="items" value="2"> 2
+        <input type="checkbox" u-bind="items" value="3"> 3
     </form>`, {
     items: [1, 2]
 });
 ```
 
-[See a live demo of two way binding](http://jsfiddle.net/ap7cp5eq/1/)
+[See a live demo of two way binding](http://jsfiddle.net/ap7cp5eq/2/)
 
-## Performance Notes
+## Script Tag Templates
+
+It is recommended to write your templates using ES6 template strings because A) it provides the opportunity to interpolate data without binding it, using the native template `${variable}` syntax, and B) it's easier to remove unnecessary whitespace in your templates during a build step. That said, you can also define templates within your HTML, and pass a DOM element instead of a template string to `uav.component`:
+
+```
+<div id="app"></div>
+<script type="template" id="template">
+    <h1>{content}</h1>
+</script>
+<script>
+const template = uav('#template');
+
+uav.component(template, {
+    content: 'Hello, world!'
+}, '#app');
+</script>
+```
+
+## Performance Tips
 
 ### Only bind data when you have to
 
