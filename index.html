@@ -1,0 +1,502 @@
+<!doctype html>
+<html>
+<head>
+    <title>uav | simple is good.</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css?family=Exo+2:200" rel="stylesheet">
+</head>
+<body>
+<style type="text/css">
+html {
+    background-color: #e8e8e8;
+}
+body {
+    margin: 0;
+    font-family: 'Exo 2', sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #4c4c4c;
+    background-color: #efefef;
+    padding: 80px 5%;
+    margin-left: 65px;
+}
+.title {
+    font-size: 26px;
+    position: relative;
+    left: 12px;
+    text-transform: none;
+    letter-spacing: 25px;
+    color: #a9a9a9;
+}
+.title + p {
+    letter-spacing: 1px;
+    color: #a9a9a9;
+}
+p, ul, h1, h2, h3, blockquote, pre {
+    max-width: 600px;
+    margin: 20px auto;
+}
+ul ul {
+    margin: 0;
+}
+h2 {
+    font-size: 18px;
+}
+h3 {
+    font-size: 16px;
+}
+blockquote {
+    padding: 0 20px;
+    border: 1px solid gainsboro;
+    border-left: 3px solid #ccc;
+    background: #f3f3f3;
+}
+pre {
+    background: #3a3a3a;
+    padding: 20px 25px;
+    color: #efefef;
+    overflow-x: scroll;
+    font-size: 14px;
+}
+.center {
+    text-align: center;
+    margin-bottom: 80px;
+}
+code {
+    word-break: break-word;
+    font-size: 14px;
+}
+pre code {
+    word-break: normal;
+}
+a {
+    color: #467ec7;
+    text-decoration: none;
+}
+.menu-toggle {
+    position: fixed;
+    z-index: 2;
+    top: 18px;
+    left: 18px;
+    padding: 0;
+    margin: 0;
+    width: 27px;
+    appearance: none;
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    border-radius: 0;
+    height: 25px;
+    outline: none;
+    cursor: pointer;
+    background: none;
+}
+
+.menu {
+    width: 27px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding: 18px 10px 10px 18px;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.menu .bar {
+    background-color: #e8e8e8;
+    height: 4px;
+    margin-bottom: 4px;
+    box-shadow: 0px 4px 0px rgba(0,0,0,.15);
+    -moz-box-shadow: 0px 4px 0px rgba(0,0,0,.15);
+    -webkit-box-shadow: 0px 4px 0px rgba(0,0,0,.15);
+}
+
+.nav {
+    font-size: 10pt;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+    background-color: rgba(0,0,0,.8);
+    position: fixed;
+    top: 0;
+    left: -200px;
+    padding-top: 60px;
+    height: 100%;
+    z-index: 2;
+    width: 200px;
+    min-width: 101px;
+    box-sizing: border-box;
+}
+.nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow-y: scroll;
+    pointer-events: auto;
+    height: 100%;
+}
+.nav ul ul {
+    padding-left: 24px;
+}
+.nav a {
+    pointer-events: auto;
+    display: block;
+    color: white;
+    line-height: 34px;
+    padding: 0 25px 0 20px;
+    visibility: visible;
+}
+
+.nav a:hover {
+    color: #DEDEDE;
+}
+
+.menu-toggle:checked {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.menu-toggle:checked + .nav {
+    visibility: visible;
+    opacity: 1;
+    left: 0;
+}
+</style>
+<div class="center">
+<h1 class="title">uav</h1>
+<p>
+<a href="https://github.com/unearth-inc/uav">github</a> | <a href="https://www.npmjs.com/package/uav">npm</a>
+</p>
+</div>
+<blockquote>
+<p><code>uav</code> is a JavaScript view library for those who are skeptical of complexity.</p>
+<ul>
+<li>It's data-bound. You just change your data, and the view updates accordingly.</li>
+<li>It's simple. The syntax is minimal; there are no dependencies or required toolchains.</li>
+<li>It's small. Less than 3KB gzipped.</li>
+</ul>
+</blockquote>
+
+<input type="checkbox" class="menu-toggle">
+<div class="nav">
+    <ul>
+    <li><a href="#hello-world">Hello World</a></li>
+    <li><a href="#todo-app">Todo App</a></li>
+    <li><a href="#creating-a-component">Creating a Component</a></li>
+    <li><a href="#template-expressions">Template Expressions</a>
+    <ul>
+    <li><a href="#content-expressions">Content Expressions</a></li>
+    <li><a href="#attribute-expressions">Attribute Expressions</a></li>
+    <li><a href="#template-loops">Template Loops</a></li>
+    </ul>
+    </li>
+    <li><a href="#events">Events</a></li>
+    <li><a href="#child-components">Child Components</a></li>
+    <li><a href="#passing-data-to-children">Passing Data to Children</a></li>
+    <li><a href="#creating-a-model">Creating a Model</a></li>
+    <li><a href="#binding-html">Binding HTML</a></li>
+    <li><a href="#boolean-attributes">Boolean Attributes</a></li>
+    <li><a href="#dom-access">DOM Access</a></li>
+    <li><a href="#two-way-data-binding">Two Way Data Binding</a></li>
+    <li><a href="#script-tag-templates">Script Tag Templates</a></li>
+    <li><a href="#performance-notes">Performance Notes</a></li>
+    <li><a href="#browser-compatibility">Browser Compatibility</a></li>
+    </ul>
+</div>
+<div class="menu">
+    <div class="bar"></div>
+    <div class="bar"></div>
+    <div class="bar"></div>
+</div>
+
+<h2><a href="#hello-world" aria-hidden="true" class="anchor" id="hello-world"></a>Hello World</h2>
+<pre><code>const component = uav.component(
+    `&lt;h1&gt;{message}&lt;/h1&gt;`,
+    { message: 'Hello, world!' }, 
+    '#app'
+);
+
+// Renders into the #app element:
+&lt;h1&gt;Hello, world!&lt;/h1&gt;
+
+// After running the following ...
+component.message = 'Goodbye, world.';
+
+// ... the HTML automatically updates:
+&lt;h1&gt;Goodbye, world.&lt;/h1&gt;
+</code></pre>
+<h2><a href="#todo-app" aria-hidden="true" class="anchor" id="todo-app"></a>Todo App</h2>
+<p><a href="http://jsfiddle.net/t16bzg3m/15/">Click here for a live example</a></p>
+<h2><a href="#creating-a-component" aria-hidden="true" class="anchor" id="creating-a-component"></a>Creating a Component</h2>
+<p><code>uav.component(template, model, container, callback)</code></p>
+<p>Arguments:</p>
+<ul>
+<li><code>template</code> (String or Element): An HTML template. Must have exactly one root node.</li>
+<li><code>model</code> (Object): A view model. Optional.</li>
+<li><code>container</code> (String or Element): The element in which to render the component. Optional.</li>
+<li><code>callback</code> (Function): A callback that will be passed the component's root node. Optional.</li>
+</ul>
+<p>Returns the model, if provided. Otherwise returns the component's DOM node.</p>
+<p>Changes to existing properties on the model will trigger an optimized re-render. Only the smallest DOM change possible will occur based on which properties on the model have changed.</p>
+<h2><a href="#template-expressions" aria-hidden="true" class="anchor" id="template-expressions"></a>Template Expressions</h2>
+<p>By default, uav expressions use <code>{curly}</code> notation. Any browser-supported JavaScript can be used in an any expression. The result of an expression can be any of the following:</p>
+<ul>
+<li>String</li>
+<li>Number</li>
+<li>Function</li>
+<li>Boolean</li>
+<li>DOM element</li>
+<li>uav component</li>
+<li>undefined or null (renders an empty string)</li>
+</ul>
+<blockquote>
+<p>You can change the template tag syntax with <code>uav.setTag()</code>. For example, to use <code>{{mustache}}</code> notation, call <code>uav.setTag('{{', '}}')</code> before creating any components.</p>
+</blockquote>
+<h3><a href="#content-expressions" aria-hidden="true" class="anchor" id="content-expressions"></a>Content Expressions:</h3>
+<pre><code>uav.component(
+    `&lt;div&gt;This is a content expression: {content}&lt;/div&gt;`,
+    { content: 'foo' }
+);
+</code></pre>
+<h3><a href="#attribute-expressions" aria-hidden="true" class="anchor" id="attribute-expressions"></a>Attribute Expressions:</h3>
+<p>Prepend <code>u-</code> to an attribute name to tell <code>uav</code> to parse it.</p>
+<pre><code>const component = uav.component(
+    `&lt;div u-class="{className} {visible}"&gt;&lt;/div&gt;`, {
+    visible: true,
+    className: 'component'
+});
+
+// Renders the following:
+&lt;div class="component visible"&gt;&lt;/div&gt;
+</code></pre>
+<blockquote>
+<p>If an attribute expression evaluates to a boolean, it will render nothing if false, or the property name if true. This makes toggling the "visible" class on the above <code>&lt;div&gt;</code> as easy as <code>component.visble = !component.visible</code>.</p>
+</blockquote>
+<h3><a href="#template-loops" aria-hidden="true" class="anchor" id="template-loops"></a>Template Loops</h3>
+<p>Use the <code>u-for</code> attribute to loop over an array as follows:</p>
+<pre><code>uav.component(`
+    &lt;ul u-for="items as item"&gt;
+        &lt;li&gt;{item}&lt;/li&gt;
+    &lt;/ul&gt;
+`, {
+    items: [ 1, 2, 'three' ]
+});
+</code></pre>
+<p>This component will render the following:</p>
+<pre><code>&lt;ul&gt;
+    &lt;li&gt;1&lt;/li&gt;
+    &lt;li&gt;2&lt;/li&gt;
+    &lt;li&gt;three&lt;/li&gt;
+&lt;/ul&gt;
+</code></pre>
+<p>You can set a variable for the index of the current item by adding a comma and a variable name to the attribute value:</p>
+<pre><code>uav.component(`
+    &lt;ul u-for="items as item, index"&gt;
+        &lt;li class="item-{index}"&gt;{item}&lt;/li&gt;
+    &lt;/ul&gt;
+`, {
+    items: [ 1, 2, 'three' ]
+});
+</code></pre>
+<p>Renders:</p>
+<pre><code>&lt;ul&gt;
+    &lt;li class="item-0"&gt;1&lt;/li&gt;
+    &lt;li class="item-1"&gt;2&lt;/li&gt;
+    &lt;li class="item-2"&gt;three&lt;/li&gt;
+&lt;/ul&gt;
+</code></pre>
+<p>Things you may wonder about:</p>
+<ul>
+<li>Properties of the parent model are available within a loop.</li>
+<li>Like a component, a loop's content must have one root node.</li>
+<li>Array methods that modify the array like <code>push</code> and <code>splice</code> will trigger a render.</li>
+</ul>
+<h3><a href="#events" aria-hidden="true" class="anchor" id="events"></a>Events</h3>
+<pre><code>uav.component(
+    `&lt;button u-onclick="{click}"&gt;Click me&lt;/button&gt;`,
+    { click: e =&gt; console.log(e) }
+);
+</code></pre>
+<p>Like any expression, you can pass data to an event handler:</p>
+<pre><code>uav.component(`
+    &lt;ul u-for="items as item"&gt;
+        &lt;li u-onclick="{click(item)}"&gt;This is {item}&lt;/li&gt;
+    &lt;/ul&gt;
+`, {
+    click: item =&gt; e =&gt; console.log(item),
+    items: [ 'foo', 'bar', 'baz' ]
+});
+</code></pre>
+<h2><a href="#child-components" aria-hidden="true" class="anchor" id="child-components"></a>Child Components</h2>
+<p>A component can be rendered into other components.</p>
+<pre><code>const child = uav.component(`&lt;h3&gt;{message}&lt;/h3&gt;`, {
+    message: 'I am a child.'
+});
+
+uav.component(`
+    &lt;div&gt;
+        &lt;h1&gt;This is a component with a child.&lt;/h1&gt;
+        {child}
+    &lt;/div&gt;
+`, { child });
+</code></pre>
+<p>This will render the following:</p>
+<pre><code>&lt;div&gt;
+    &lt;h1&gt;This is a component with a child.&lt;/h1&gt;
+    &lt;h3&gt;I am a child.&lt;/h3&gt;
+&lt;/div&gt;
+</code></pre>
+<h3><a href="#passing-data-to-children" aria-hidden="true" class="anchor" id="passing-data-to-children"></a>Passing Data to Children</h3>
+<pre><code>const child = data =&gt; uav.component(
+    `&lt;em&gt;{data}&lt;/em&gt;`,
+    { data }
+);
+
+uav.component(`
+    &lt;div&gt;
+        This component passes data to its child.
+        {child}
+    &lt;/div&gt;
+`, {
+    child: child('This is passed from parent to child.')
+});
+</code></pre>
+<p>The parent component above passes data when the model is created. You could just as easily pass the data through the template:</p>
+<pre><code>uav.component(`
+    &lt;div&gt;
+        This component passes data to its child.
+        {child('This is passed from parent to child.')}
+    &lt;/div&gt;
+`, { child });
+</code></pre>
+<p>Either way, it will render the following:</p>
+<pre><code>&lt;div&gt;
+    This component passes data to its child.
+    &lt;em&gt;This is passed from parent to child.&lt;/em&gt;
+&lt;/div&gt;
+</code></pre>
+<p>uav supports swapping child components on the fly. For example, you could call <code>component.child = someOtherComponent</code> and the view will update accordingly.</p>
+<h2><a href="#creating-a-model" aria-hidden="true" class="anchor" id="creating-a-model"></a>Creating a Model</h2>
+<p>If you want to create a view model before associating it with a template, use <code>uav.model</code>. This can come in handy when a model refers to itself at render time.</p>
+<pre><code>const model = uav.model({
+    blue: true,
+    redOrBlue: () =&gt; model.blue ? 'blue' : 'red'
+});
+
+const component = uav.component(
+    '&lt;div class="{redOrBlue()}"&gt;&lt;/div&gt;', 
+    model
+);
+</code></pre>
+<h3><a href="#binding-html" aria-hidden="true" class="anchor" id="binding-html"></a>Binding HTML</h3>
+<p>To render an HTML string as a DOM element, simply treat the string as the template of a child component by passing it through <code>uav.component()</code>.</p>
+<pre><code>uav.component(
+    `&lt;div&gt;{html}&lt;/div&gt;`, {
+    html: uav.parse('&lt;script&gt;location="https://en.wikipedia.org/wiki/Cross-site_scripting"&lt;/script&gt;')
+});
+</code></pre>
+<h2><a href="#boolean-attributes" aria-hidden="true" class="anchor" id="boolean-attributes"></a>Boolean Attributes</h2>
+<p>Use the <code>u-attr</code> attribute to bind a boolean attribute on an element.</p>
+<pre><code>uav.component(
+    `&lt;input type="text" u-attr="{disabled}"&gt;`,
+    { disabled: true }
+);
+
+// Renders:
+&lt;input type="text" disabled&gt;
+</code></pre>
+<p>Just because these are called boolean attributes doesn't mean they have to bound to a boolean value. Here's an example that uses a string:</p>
+<pre><code>uav.component(
+    `&lt;input type="text" u-attr="{'aria-' + ariaProp}"&gt;`,
+    { ariaProp: 'hidden' }
+);
+
+// Renders:
+&lt;input type="text" aria-hidden&gt;
+</code></pre>
+<h2><a href="#dom-access" aria-hidden="true" class="anchor" id="dom-access"></a>DOM Access</h2>
+<p>Elements can be accessed directly by passing a selector to the <code>uav</code> or <code>uav.all</code> functions.</p>
+<p>Access the first matched element:</p>
+<p><code>uav('.item').classList.toggle('visible');</code></p>
+<p>Run a callback on all matched elements:</p>
+<p><code>uav('.item', item =&gt; item.classList.toggle('visible'));</code></p>
+<p>Get an array of all matched elements:</p>
+<p><code>uav.all('.item').forEach(item =&gt; item.classList.toggle('visible'));</code></p>
+<h2><a href="#two-way-data-binding" aria-hidden="true" class="anchor" id="two-way-data-binding"></a>Two Way Data Binding</h2>
+<p>Use the <code>u-bind</code> attribute to two-way bind an input, select, or textarea to a model property. Whenever the user changes the value of the input, the property will be updated. Whenever you programatically change the property, the input's value will be updated.</p>
+<pre><code>uav.component(
+    `&lt;input type="text" u-bind="value"/&gt;`,
+    { value: 'hi there' }
+);
+</code></pre>
+<p>Checkboxes can be bound to arrays or booleans.</p>
+<pre><code>uav.component(`
+    &lt;form&gt;
+        &lt;input type="checkbox" u-bind="items" value="1"&gt; 1
+        &lt;input type="checkbox" u-bind="items" value="2"&gt; 2
+        &lt;input type="checkbox" u-bind="items" value="3"&gt; 3
+    &lt;/form&gt;`, {
+    items: [1, 2]
+});
+</code></pre>
+<p><a href="http://jsfiddle.net/ap7cp5eq/2/">See a live demo of two way binding</a></p>
+<h2><a href="#script-tag-templates" aria-hidden="true" class="anchor" id="script-tag-templates"></a>Script Tag Templates</h2>
+<p>It is recommended to write your templates using ES6 template strings because A) it provides the opportunity to interpolate data without binding it, using the native template <code>${variable}</code> syntax, and B) it's easier to remove unnecessary whitespace in your templates during a build step. That said, you can also define templates within your HTML, and pass a DOM element instead of a template string to <code>uav.component</code>:</p>
+<pre><code>&lt;div id="app"&gt;&lt;/div&gt;
+&lt;script type="template" id="template"&gt;
+    &lt;h1&gt;{content}&lt;/h1&gt;
+&lt;/script&gt;
+&lt;script&gt;
+const template = uav('#template');
+
+uav.component(template, {
+    content: 'Hello, world!'
+}, '#app');
+&lt;/script&gt;
+</code></pre>
+<h2><a href="#performance-tips" aria-hidden="true" class="anchor" id="performance-tips"></a>Performance Tips</h2>
+<h3><a href="#only-bind-data-when-you-have-to" aria-hidden="true" class="anchor" id="only-bind-data-when-you-have-to"></a>Only bind data when you have to</h3>
+<p>Avoid putting any data on the model that doesn't need to be bound to the DOM. If a particular value will never change, or changes to it don't need to update the DOM, just use a regular ES6 template variable to reference it (put a dollar sign in front of the expression).</p>
+<pre><code>const wontChange = 'hi!';
+
+uav.component(`
+    &lt;div&gt;
+        &lt;p&gt;${wontChange}&lt;/p&gt;
+        &lt;p&gt;{willChange}&lt;/p&gt;
+    &lt;/div&gt;
+`, {
+    willChange: 'loading...'
+})
+</code></pre>
+<h3><a href="#unbind-any-dom-nodes-youve-manually-detached" aria-hidden="true" class="anchor" id="unbind-any-dom-nodes-youve-manually-detached"></a>Unbind any DOM nodes you've manually detached</h3>
+<p>When uav updates the DOM as a result of a change to a model, it automatically removes any bindings to DOM nodes that have been removed or replaced. However, if for some reason you manually remove or replace a bound DOM node, you can clean up any bindings associated with it by calling <code>uav.unbind(&lt;Element&gt;)</code>.</p>
+<h2><a href="#collapsing-whitespace" aria-hidden="true" class="anchor" id="collapsing-whitespace"></a>Collapsing Whitespace</h2>
+<p>Using multiline template strings creates unnecessary whitespace in your JavaScript files. To collapse this whitespace, add a step like this to your build process:</p>
+<p><code>tr -s " " &lt; dist/bundle.js &gt; dist/tmp &amp;&amp; mv dist/tmp dist/bundle.js</code></p>
+<h2><a href="#browser-compatibility" aria-hidden="true" class="anchor" id="browser-compatibility"></a>Browser Compatibility</h2>
+<p>Modern browsers and IE9+.</p>
+<script>
+[].slice.call(document.querySelectorAll('.nav a')).forEach(function(el) {
+
+    el.addEventListener('click', function() {
+
+        document.querySelector('.menu-toggle').checked = false;
+
+    });
+
+});
+</script>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-106154554-1', 'auto');
+  ga('send', 'pageview');
+</script>
+</body>
+</html>
