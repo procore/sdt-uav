@@ -8,6 +8,9 @@
 </head>
 <body>
 <style type="text/css">
+html {
+    background-color: #e8e8e8;
+}
 body {
     margin: 0;
     font-family: 'Exo 2', sans-serif;
@@ -15,7 +18,8 @@ body {
     line-height: 1.7;
     color: #4c4c4c;
     background-color: #efefef;
-    padding: 80px 30px 80px 65px;
+    padding: 80px 5%;
+    margin-left: 65px;
 }
 .title {
     font-size: 26px;
@@ -73,8 +77,8 @@ a {
 .menu-toggle {
     position: fixed;
     z-index: 2;
-    top: 20px;
-    left: 20px;
+    top: 18px;
+    left: 18px;
     padding: 0;
     margin: 0;
     width: 27px;
@@ -94,13 +98,13 @@ a {
     position: fixed;
     top: 0;
     left: 0;
-    padding: 20px 10px 10px 20px;
+    padding: 18px 10px 10px 18px;
     z-index: 2;
     pointer-events: none;
 }
 
 .menu .bar {
-    background-color: #F9F9F9;
+    background-color: #e8e8e8;
     height: 4px;
     margin-bottom: 4px;
     box-shadow: 0px 4px 0px rgba(0,0,0,.15);
@@ -171,8 +175,8 @@ a {
 <blockquote>
 <p><code>uav</code> is a JavaScript view library for those who are skeptical of complexity.</p>
 <ul>
-<li>It's reactive. You just change your data, and the view updates accordingly.</li>
-<li>It's simple. The syntax is minimal; there are no dependencies or fancy toolchains.</li>
+<li>It's data-bound. You just change your data, and the view updates accordingly.</li>
+<li>It's simple. The syntax is minimal; there are no dependencies or required toolchains.</li>
 <li>It's small. Less than 3KB gzipped.</li>
 </ul>
 </blockquote>
@@ -389,7 +393,7 @@ const component = uav.component(
 );
 </code></pre>
 <h3><a href="#binding-html" aria-hidden="true" class="anchor" id="binding-html"></a>Binding HTML</h3>
-<p>To render an HTML string as a DOM element, you can use <code>uav.parse()</code>. This is equivalent to calling <code>uav.component()</code> with only one argument.</p>
+<p>To render an HTML string as a DOM element, simply treat the string as the template of a child component by passing it through <code>uav.component()</code>.</p>
 <pre><code>uav.component(
     `&lt;div&gt;{html}&lt;/div&gt;`, {
     html: uav.parse('&lt;script&gt;location="https://en.wikipedia.org/wiki/Cross-site_scripting"&lt;/script&gt;')

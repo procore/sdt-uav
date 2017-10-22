@@ -36,9 +36,9 @@ function bindTextNode(steps, expression) {
             }
 
         } else {
-
+            
             node.textContent = value;
-
+            console.log('set text to ' + node.textContent);
         }
 
     };

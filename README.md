@@ -1,7 +1,7 @@
 `uav` is a JavaScript view library for those who are skeptical of complexity.
 
-* It's reactive. You just change your data, and the view updates accordingly.
-* It's simple. The syntax is minimal; there are no dependencies or fancy toolchains.
+* It's data-bound. You just change your data, and the view updates accordingly.
+* It's simple. The syntax is minimal; there are no dependencies or required toolchains.
 * It's small. Less than 3KB gzipped.
 
 Table of contents:
@@ -256,12 +256,12 @@ const component = uav.component(
 ```
 
 ### Binding HTML
-To render an HTML string as a DOM element, you can use `uav.parse()`. This is equivalent to calling `uav.component()` with only one argument.
+To render an HTML string as a DOM element, simply treat the string as the template of a child component by passing it through `uav.component()`.
 
 ```
 uav.component(
     `<div>{html}</div>`, {
-    html: uav.parse('<script>location="https://en.wikipedia.org/wiki/Cross-site_scripting"</script>')
+    html: uav.component('<script>location="https://en.wikipedia.org/wiki/Cross-site_scripting"</script>')
 });
 ```
 

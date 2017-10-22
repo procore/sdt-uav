@@ -46,7 +46,9 @@ export default (attribute, steps, node) => {
 
             ctx[index] = i;
 
-            return util.render(childSteps, state.vm, ctx);
+            const child = util.render(childSteps, state.vm, ctx);
+
+            return child;
 
         }
 
@@ -100,14 +102,6 @@ export default (attribute, steps, node) => {
 
     };
 
-    steps.push(state => {
-
-        const _binding = binding(state.el);
-
-        _binding.isLoop = true;
-
-        return util.bindStep(_binding, state);
-
-    });
+    steps.push(state => util.bindStep(binding(state.el), state));
 
 };

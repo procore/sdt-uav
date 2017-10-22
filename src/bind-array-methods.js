@@ -2,6 +2,20 @@ import util from './util';
 import uav from './uav';
 
 /**
+ * Run an array method with the given arguments.
+ * 
+ * @param  {Array} list    - the array on which to operate
+ * @param  {String} method - the name of the method to run
+ * @param  {Array} args    - arguments to pass the method
+ * @return {any} - the return value of the called method.
+ */
+function runMethod(list, method, args) {
+
+    return Array.prototype[method].apply(list, args);
+
+}
+
+/**
  * Wrap all array methods that modify the array,
  * so that the appropriate cleanup or binding 
  * is triggered.
@@ -10,7 +24,6 @@ import uav from './uav';
  * @param {Function} runBindings - run any bindings to the array that aren't loops
  * @return {undefined}
  */
-
 export default (list, runBindings) => {
 
     util.defineProp(list, 'fill', (value, start = 0, end = list.length) => {
@@ -29,17 +42,13 @@ export default (list, runBindings) => {
 
         }
 
-        const bindings = list._uav[0];
-
-        Array.prototype.fill.apply(list, [value, start, end]);
+        runMethod(list, 'fill', [value, start, end]);
 
         for (let i = list.length; i < end; i++) {
 
             list._watch(value, i);
 
             list._loops.forEach(loop => loop.add(value, i));
-
-            list._uav[i] = bindings;
 
         }
 
@@ -55,17 +64,13 @@ export default (list, runBindings) => {
 
         const startIndex = list.length;
 
-        const bindings = list._uav[0];
-
-        Array.prototype.push.apply(list, args);
+        runMethod(list, 'push', args);
 
         for (let i = startIndex; i < startIndex + args.length; i++) {
 
             list._watch(list[i], i);
 
             list._loops.forEach(loop => loop.add(list[i], i));
-
-            list._uav[i] = bindings;
 
         }
 
@@ -81,9 +86,7 @@ export default (list, runBindings) => {
 
         list._loops.forEach(loop => loop.remove(lastIndex));
 
-        const result = Array.prototype.pop.call(list);
-
-        delete list._uav[lastIndex];
+        const result = runMethod(list, 'pop');
 
         runBindings();
 
@@ -95,13 +98,13 @@ export default (list, runBindings) => {
 
         uav._pause = true;
 
-        const result = Array.prototype.reverse.call(list);
+        runMethod(list, 'reverse');
         
         runBindings();
 
         delete uav._pause;
 
-        return result;
+        return list;
 
     });
 
@@ -109,9 +112,7 @@ export default (list, runBindings) => {
 
         list._loops.forEach(loop => loop.remove(0));
 
-        const result = Array.prototype.shift.call(list);
-
-        delete list._uav[0];
+        const result = runMethod(list, 'shift');
 
         runBindings();
 
@@ -123,7 +124,7 @@ export default (list, runBindings) => {
 
         uav._pause = true;
 
-        const result = Array.prototype.sort.call(list, compare);
+        const result = runMethod(list, 'sort', [compare]);
         
         runBindings();
 
@@ -139,9 +140,7 @@ export default (list, runBindings) => {
 
         const originalLength = list.length;
 
-        const bindings = list._uav[0];
-
-        const result = Array.prototype.splice.apply(list, [args.shift(), args.shift()].concat(args));
+        const result = runMethod(list, 'splice', [args.shift(), args.shift()].concat(args));
 
         for (let i = originalLength; i < list.length; i++) {
 
@@ -149,15 +148,11 @@ export default (list, runBindings) => {
 
             list._loops.forEach(loop => loop.add(list[i], i));
 
-            list._uav[i] = bindings;
-
         }
 
         for (let i = list.length; i < originalLength; i++) {
 
             list._loops.forEach(loop => loop.remove(i));
-
-            delete list._uav[i];
 
         }
 
@@ -173,17 +168,13 @@ export default (list, runBindings) => {
 
         const originalLength = list.length;
 
-        const bindings = list._uav[0];
-
-        Array.prototype.unshift.apply(list, args);
+        runMethod(list, 'unshift', args);
 
         for (let i = originalLength; i < list.length; i++) {
 
             list._watch(list[i], i);
 
             list._loops.forEach(loop => loop.add(list[i], i));
-
-            list._uav[i] = bindings;
 
         }
 

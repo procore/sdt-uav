@@ -1,6 +1,5 @@
 import util from './util';
 import uav from './uav';
-import parseHtml from './parse/html';
 import model from './model';
 import component from './component';
 
@@ -28,7 +27,6 @@ util.setTag('{', '}');
  */
 uav.component = component;
 uav.model = model;
-uav.parse = parseHtml;
 uav.setTag = util.setTag;
 uav.unbind = util.unbind;
 

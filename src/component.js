@@ -24,12 +24,27 @@ export default function(html, vm, parent) {
 
     }
 
+    /**
+     * parseElement returns a list of functions called "steps"
+     * that, when run in sequence, construct a data-bound clone
+     * of the node.
+     */
     const steps = parseElement(node);
 
+    /**
+     * Running an object through the model function adds getters
+     * and setters to all of its properties, to support data binding.
+     */
     vm = model(vm);
 
+    /**
+     * util.render runs the steps we created above.
+     */
     vm._el = util.render(steps, vm);
 
+    /**
+     * Now we can insert the bound element into the DOM.
+     */
     if (parent) {
 
         if (typeof parent === 'string') {
@@ -50,6 +65,10 @@ export default function(html, vm, parent) {
 
     }
 
+    /**
+     * If any argument is a function, pass it the
+     * component's bound element.
+     */
     for (let i = 1; i < arguments.length; i++) {
     
         if (typeof arguments[i] === 'function') {
