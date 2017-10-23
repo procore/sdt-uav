@@ -396,7 +396,7 @@ const component = uav.component(
 <p>To render an HTML string as a DOM element, simply treat the string as the template of a child component by passing it through <code>uav.component()</code>.</p>
 <pre><code>uav.component(
     `&lt;div&gt;{html}&lt;/div&gt;`, {
-    html: uav.parse('&lt;script&gt;location="https://en.wikipedia.org/wiki/Cross-site_scripting"&lt;/script&gt;')
+    html: uav.component('&lt;script&gt;location="https://en.wikipedia.org/wiki/Cross-site_scripting"&lt;/script&gt;')
 });
 </code></pre>
 <h2><a href="#boolean-attributes" aria-hidden="true" class="anchor" id="boolean-attributes"></a>Boolean Attributes</h2>
