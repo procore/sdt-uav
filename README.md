@@ -106,7 +106,7 @@ Use the `u-for` attribute to loop over an array as follows:
 
 ```
 uav.component(`
-    <ul u-for="items as item">
+    <ul u-for="item in items">
         <li>{item}</li>
     </ul>
 `, {
@@ -128,7 +128,7 @@ You can set a variable for the index of the current item by adding a comma and a
 
 ```
 uav.component(`
-    <ul u-for="items as item, index">
+    <ul u-for="item, index in items">
         <li class="item-{index}">{item}</li>
     </ul>
 `, {
@@ -164,7 +164,7 @@ Like any expression, you can pass data to an event handler:
 
 ```
 uav.component(`
-    <ul u-for="items as item">
+    <ul u-for="item in items">
         <li u-onclick="{click(item)}">This is {item}</li>
     </ul>
 `, {

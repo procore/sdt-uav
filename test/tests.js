@@ -107,20 +107,20 @@ describe('uav', () => {
     it('should support loops', () => {
 
         const component = uav.component(`
-            <ul u-for="list as item, index">
-                <li>{index}: {item}</li>
+            <ul u-for="item in list">
+                <li>{item}</li>
             </ul>`, {
                 list: [1, 2, 3]
             });
 
         const secondItem = component._el.firstElementChild.nextElementSibling;
 
-        expect(component._el.outerHTML).toBe('<ul><li>0: 1</li><li>1: 2</li><li>2: 3</li></ul>');
+        expect(component._el.outerHTML).toBe('<ul><li>1</li><li>2</li><li>3</li></ul>');
 
         component.list[0] = 'foo';
         component.list[2] = 'bar';
 
-        expect(component._el.outerHTML).toBe('<ul><li>0: foo</li><li>1: 2</li><li>2: bar</li></ul>');
+        expect(component._el.outerHTML).toBe('<ul><li>foo</li><li>2</li><li>bar</li></ul>');
 
         // Ensure the content wasn't completely re-rendered
         expect(component._el.firstElementChild.nextElementSibling).toBe(secondItem);
@@ -130,8 +130,8 @@ describe('uav', () => {
     it('should support nested loops', () => {
 
         const component = uav.component(`
-            <div u-for="list as item,index">
-                <div u-for="item as it,i">
+            <div u-for="item,index in list">
+                <div u-for="it,i in item">
                     <span>{i}:{it}</span>
                 </div>
             </div>`, {
@@ -237,7 +237,7 @@ describe('uav', () => {
     it('should support array.push', () => {
 
         const component = uav.component(`
-            <ul u-for="list as item,index">
+            <ul u-for="item,index in list">
                 <li>{index}: {item}</li>
             </ul>`, {
                 list: [1]
@@ -260,7 +260,7 @@ describe('uav', () => {
     it('should support array.pop', () => {
 
         const component = uav.component(`
-            <ul u-for="list as item,index">
+            <ul u-for="item,index in list">
                 <li>{index}: {item}</li>
             </ul>`, {
                 list: [1, 2]
@@ -281,7 +281,7 @@ describe('uav', () => {
     it('should support array.shift', () => {
 
         const component = uav.component(`
-            <ul u-for="list as item,index">
+            <ul u-for="item,index in list">
                 <li>{index}: {item}</li>
             </ul>`, {
                 list: [1, 2]
@@ -298,7 +298,7 @@ describe('uav', () => {
     it('should support array.splice deletion', () => {
 
         const component = uav.component(`
-            <ul u-for="list as item,index">
+            <ul u-for="item,index in list">
                 <li>{index}: {item}</li>
             </ul>`, {
                 list: [1, 2]
@@ -315,7 +315,7 @@ describe('uav', () => {
     it('should support array.splice addition', () => {
 
         const component = uav.component(`
-            <ul u-for="list as item,index">
+            <ul u-for="item,index in list">
                 <li>{index}: {item}</li>
             </ul>`, {
                 list: [1]
@@ -336,7 +336,7 @@ describe('uav', () => {
     it('should support array.unshift', () => {
 
         const component = uav.component(`
-            <ul u-for="list as item,index">
+            <ul u-for="item,index in list">
                 <li>{index}: {item}</li>
             </ul>`, {
                 list: [1]
@@ -355,7 +355,7 @@ describe('uav', () => {
     it('should support array.reverse', () => {
 
         const component = uav.component(`
-            <ul u-for="list as item,index">
+            <ul u-for="item,index in list">
                 <li>{index}: {item}</li>
             </ul>`, {
                 list: [1, 2]
@@ -370,7 +370,7 @@ describe('uav', () => {
     it('should support array.sort', () => {
 
         const component = uav.component(`
-            <ul u-for="list as item,index">
+            <ul u-for="item,index in list">
                 <li>{index}: {item}</li>
             </ul>`, {
                 list: [1, 2]

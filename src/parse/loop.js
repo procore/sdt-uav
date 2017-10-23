@@ -14,11 +14,11 @@ import model from '../model';
  */
 export default (attribute, steps, node) => {
 
-    const loopVars = util.stripTags(attribute.value).split(' as ');
+    const loopVars = util.stripTags(attribute.value).split(' in ');
 
-    const evaluate = parseExpression(loopVars[0]);
+    const evaluate = parseExpression(loopVars[1]);
 
-    const valueVars = loopVars[1].split(',');
+    const valueVars = loopVars[0].split(',');
 
     const as = valueVars[0].trim();
 

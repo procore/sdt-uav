@@ -682,11 +682,11 @@
      */
     var loop = function loop(attribute, steps, node) {
 
-        var loopVars = util.stripTags(attribute.value).split(' as ');
+        var loopVars = util.stripTags(attribute.value).split(' in ');
 
-        var evaluate = parseExpression(loopVars[0]);
+        var evaluate = parseExpression(loopVars[1]);
 
-        var valueVars = loopVars[1].split(',');
+        var valueVars = loopVars[0].split(',');
 
         var as = valueVars[0].trim();
 

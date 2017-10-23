@@ -279,7 +279,7 @@ component.message = 'Goodbye, world.';
 <h3><a href="#template-loops" aria-hidden="true" class="anchor" id="template-loops"></a>Template Loops</h3>
 <p>Use the <code>u-for</code> attribute to loop over an array as follows:</p>
 <pre><code>uav.component(`
-    &lt;ul u-for="items as item"&gt;
+    &lt;ul u-for="item in items"&gt;
         &lt;li&gt;{item}&lt;/li&gt;
     &lt;/ul&gt;
 `, {
@@ -295,7 +295,7 @@ component.message = 'Goodbye, world.';
 </code></pre>
 <p>You can set a variable for the index of the current item by adding a comma and a variable name to the attribute value:</p>
 <pre><code>uav.component(`
-    &lt;ul u-for="items as item, index"&gt;
+    &lt;ul u-for="item, index in items"&gt;
         &lt;li class="item-{index}"&gt;{item}&lt;/li&gt;
     &lt;/ul&gt;
 `, {
@@ -323,7 +323,7 @@ component.message = 'Goodbye, world.';
 </code></pre>
 <p>Like any expression, you can pass data to an event handler:</p>
 <pre><code>uav.component(`
-    &lt;ul u-for="items as item"&gt;
+    &lt;ul u-for="item in items"&gt;
         &lt;li u-onclick="{click(item)}"&gt;This is {item}&lt;/li&gt;
     &lt;/ul&gt;
 `, {
