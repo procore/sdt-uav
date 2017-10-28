@@ -1,6 +1,6 @@
 {
   "name": "uav",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Simple is good",
   "main": "dist/uav.js",
   "scripts": {

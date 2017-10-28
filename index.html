@@ -230,7 +230,7 @@ component.message = 'Goodbye, world.';
 &lt;h1&gt;Goodbye, world.&lt;/h1&gt;
 </code></pre>
 <h2><a href="#todo-app" aria-hidden="true" class="anchor" id="todo-app"></a>Todo App</h2>
-<p><a href="http://jsfiddle.net/t16bzg3m/15/">Click here for a live example</a></p>
+<p><a href="http://jsfiddle.net/t16bzg3m/16/">Click here for a live example</a></p>
 <h2><a href="#creating-a-component" aria-hidden="true" class="anchor" id="creating-a-component"></a>Creating a Component</h2>
 <p><code>uav.component(template, model, container, callback)</code></p>
 <p>Arguments:</p>
@@ -443,7 +443,7 @@ const component = uav.component(
     items: [1, 2]
 });
 </code></pre>
-<p><a href="http://jsfiddle.net/ap7cp5eq/2/">See a live demo of two way binding</a></p>
+<p><a href="http://jsfiddle.net/ap7cp5eq/3/">See a live demo of two way binding</a></p>
 <h2><a href="#script-tag-templates" aria-hidden="true" class="anchor" id="script-tag-templates"></a>Script Tag Templates</h2>
 <p>It is recommended to write your templates using ES6 template strings because A) it provides the opportunity to interpolate data without binding it, using the native template <code>${variable}</code> syntax, and B) it's easier to remove unnecessary whitespace in your templates during a build step. That said, you can also define templates within your HTML, and pass a DOM element instead of a template string to <code>uav.component</code>:</p>
 <pre><code>&lt;div id="app"&gt;&lt;/div&gt;

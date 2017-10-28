@@ -46,7 +46,7 @@ component.message = 'Goodbye, world.';
 
 ## Todo App
 
-[Click here for a live example](http://jsfiddle.net/t16bzg3m/15/)
+[Click here for a live example](http://jsfiddle.net/t16bzg3m/16/)
 
 ## Creating a Component
 
@@ -331,7 +331,7 @@ uav.component(`
 });
 ```
 
-[See a live demo of two way binding](http://jsfiddle.net/ap7cp5eq/2/)
+[See a live demo of two way binding](http://jsfiddle.net/ap7cp5eq/3/)
 
 ## Script Tag Templates
 
