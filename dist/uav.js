@@ -381,7 +381,7 @@
      */
     function notVmEligible(data) {
 
-        return !data || typeof data !== 'object' || data.tagName;
+        return !data || typeof data !== 'object' || data.tagName || data instanceof RegExp;
     }
 
     /**
