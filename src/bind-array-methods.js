@@ -44,11 +44,11 @@ export default (list, runBindings) => {
 
         runMethod(list, 'fill', [value, start, end]);
 
-        for (let i = list.length; i < end; i++) {
+        for (let i = 0; i < end; i++) {
 
             list._watch(value, i);
 
-            list._loops.forEach(loop => loop.add(value, i));
+            list._loops.forEach(loop => loop.replace(value, i));
 
         }
 
@@ -96,13 +96,9 @@ export default (list, runBindings) => {
 
     util.defineProp(list, 'reverse', () => {
 
-        uav._pause = true;
-
         runMethod(list, 'reverse');
         
         runBindings();
-
-        delete uav._pause;
 
         return list;
 
@@ -110,11 +106,29 @@ export default (list, runBindings) => {
 
     util.defineProp(list, 'shift', () => {
 
-        list._loops.forEach(loop => loop.remove(0));
+        uav._pause = true;
 
         const result = runMethod(list, 'shift');
 
+        list._loops.forEach(loop => {
+
+            if (loop.hasIndex) {
+
+                list.forEach(loop.replace);
+
+                loop.remove(list.length);
+
+            } else {
+
+                loop.remove(0);
+
+            }
+
+        });
+
         runBindings();
+
+        delete uav._pause;
 
         return result;
 
@@ -122,13 +136,9 @@ export default (list, runBindings) => {
 
     util.defineProp(list, 'sort', compare => {
 
-        uav._pause = true;
-
         const result = runMethod(list, 'sort', [compare]);
-        
-        runBindings();
 
-        delete uav._pause;
+        runBindings();
 
         return result;
 
@@ -138,23 +148,45 @@ export default (list, runBindings) => {
 
         uav._pause = true;
 
+        const index = args[0];
+
+        const deleteCount = args[1] || 0;
+
         const originalLength = list.length;
 
-        const result = runMethod(list, 'splice', [args.shift(), args.shift()].concat(args));
+        const result = runMethod(list, 'splice', args);
 
-        for (let i = originalLength; i < list.length; i++) {
+        list._loops.forEach(loop => {
 
-            list._watch(list[i], i);
+            if (loop.hasIndex) {
 
-            list._loops.forEach(loop => loop.add(list[i], i));
+                list.forEach(loop.replace);
 
-        }
+                for (let i = originalLength; i > list.length; i--) {
 
-        for (let i = list.length; i < originalLength; i++) {
+                    loop.remove(i - 1);
 
-            list._loops.forEach(loop => loop.remove(i));
+                }
 
-        }
+            } else {
+
+                for (let i = 0; i < deleteCount; i++) {
+
+                    loop.remove(index);
+
+                }
+
+                for (let i = 2; i < args.length; i++) {
+
+                    loop.insert(args[i], index + i - 2);
+
+                }
+
+            }
+
+        });
+
+        list.forEach(list._watch);
 
         runBindings();
 
@@ -166,19 +198,33 @@ export default (list, runBindings) => {
 
     util.defineProp(list, 'unshift', (...args) => {
 
-        const originalLength = list.length;
+        uav._pause = true;
 
         runMethod(list, 'unshift', args);
 
-        for (let i = originalLength; i < list.length; i++) {
+        list._loops.forEach(loop => {
 
-            list._watch(list[i], i);
+            if (loop.hasIndex) {
 
-            list._loops.forEach(loop => loop.add(list[i], i));
+                list.forEach(loop.replace);
 
-        }
+            } else {
+
+                args.forEach((arg, j) => {
+
+                    loop.insert(arg, j);
+
+                });
+
+            }
+
+        });
+
+        list.forEach(list._watch);
 
         runBindings();
+
+        delete uav._pause;
 
         return list;
 

@@ -1,6 +1,6 @@
 {
   "name": "uav",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "Simple is good",
   "main": "dist/uav.js",
   "scripts": {
@@ -77,5 +77,6 @@
       "babel-plugin-transform-es2015-unicode-regex",
       "babel-plugin-transform-regenerator"
     ]
-  }
+  },
+  "dependencies": {}
 }

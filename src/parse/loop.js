@@ -53,12 +53,22 @@ export default (attribute, steps, node) => {
         }
 
         const loop = {
+
+            hasIndex: index,
             
             add(item, i) {
 
                 const child = renderChild(item, i);
 
                 el.appendChild(child);
+
+            },
+
+            insert(item, i) {
+
+                const child = renderChild(item, i);
+
+                el.insertBefore(child, el.children[i]);
 
             },
 

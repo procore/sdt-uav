@@ -206,11 +206,11 @@
                 list._watch(value, i);
 
                 list._loops.forEach(function (loop) {
-                    return loop.add(value, i);
+                    return loop.replace(value, i);
                 });
             };
 
-            for (var i = list.length; i < end; i++) {
+            for (var i = 0; i < end; i++) {
                 _loop(i);
             }
 
@@ -265,39 +265,44 @@
 
         util.defineProp(list, 'reverse', function () {
 
-            uav._pause = true;
-
             runMethod(list, 'reverse');
 
             runBindings();
-
-            delete uav._pause;
 
             return list;
         });
 
         util.defineProp(list, 'shift', function () {
 
-            list._loops.forEach(function (loop) {
-                return loop.remove(0);
-            });
+            uav._pause = true;
 
             var result = runMethod(list, 'shift');
 
+            list._loops.forEach(function (loop) {
+
+                if (loop.hasIndex) {
+
+                    list.forEach(loop.replace);
+
+                    loop.remove(list.length);
+                } else {
+
+                    loop.remove(0);
+                }
+            });
+
             runBindings();
+
+            delete uav._pause;
 
             return result;
         });
 
         util.defineProp(list, 'sort', function (compare) {
 
-            uav._pause = true;
-
             var result = runMethod(list, 'sort', [compare]);
 
             runBindings();
-
-            delete uav._pause;
 
             return result;
         });
@@ -309,33 +314,39 @@
 
             uav._pause = true;
 
+            var index = args[0];
+
+            var deleteCount = args[1] || 0;
+
             var originalLength = list.length;
 
-            var result = runMethod(list, 'splice', [args.shift(), args.shift()].concat(args));
+            var result = runMethod(list, 'splice', args);
 
-            var _loop3 = function _loop3(i) {
+            list._loops.forEach(function (loop) {
 
-                list._watch(list[i], i);
+                if (loop.hasIndex) {
 
-                list._loops.forEach(function (loop) {
-                    return loop.add(list[i], i);
-                });
-            };
+                    list.forEach(loop.replace);
 
-            for (var i = originalLength; i < list.length; i++) {
-                _loop3(i);
-            }
+                    for (var i = originalLength; i > list.length; i--) {
 
-            var _loop4 = function _loop4(i) {
+                        loop.remove(i - 1);
+                    }
+                } else {
 
-                list._loops.forEach(function (loop) {
-                    return loop.remove(i);
-                });
-            };
+                    for (var _i = 0; _i < deleteCount; _i++) {
 
-            for (var i = list.length; i < originalLength; i++) {
-                _loop4(i);
-            }
+                        loop.remove(index);
+                    }
+
+                    for (var _i2 = 2; _i2 < args.length; _i2++) {
+
+                        loop.insert(args[_i2], index + _i2 - 2);
+                    }
+                }
+            });
+
+            list.forEach(list._watch);
 
             runBindings();
 
@@ -349,24 +360,29 @@
                 args[_key3] = arguments[_key3];
             }
 
-            var originalLength = list.length;
+            uav._pause = true;
 
             runMethod(list, 'unshift', args);
 
-            var _loop5 = function _loop5(i) {
+            list._loops.forEach(function (loop) {
 
-                list._watch(list[i], i);
+                if (loop.hasIndex) {
 
-                list._loops.forEach(function (loop) {
-                    return loop.add(list[i], i);
-                });
-            };
+                    list.forEach(loop.replace);
+                } else {
 
-            for (var i = originalLength; i < list.length; i++) {
-                _loop5(i);
-            }
+                    args.forEach(function (arg, j) {
+
+                        loop.insert(arg, j);
+                    });
+                }
+            });
+
+            list.forEach(list._watch);
 
             runBindings();
+
+            delete uav._pause;
 
             return list;
         });
@@ -575,10 +591,6 @@
                      */
                     if (vm._loops) {
 
-                        vm._loops.forEach(function (loop) {
-                            return loop.replace(data[key], key);
-                        });
-
                         /**
                          * uav._pause is used in bind-array-methods.js to prevent
                          * rapid-fire renders during methods like Array.fill(), 
@@ -586,6 +598,10 @@
                          * every index of the array.
                          */
                         if (!uav._pause) {
+
+                            vm._loops.forEach(function (loop) {
+                                return loop.replace(data[key], key);
+                            });
 
                             runBindings(vm._uav, 0);
                         }
@@ -721,11 +737,20 @@
                 }
 
                 var loop = {
+
+                    hasIndex: index,
+
                     add: function add(item, i) {
 
                         var child = renderChild(item, i);
 
                         el.appendChild(child);
+                    },
+                    insert: function insert(item, i) {
+
+                        var child = renderChild(item, i);
+
+                        el.insertBefore(child, el.children[i]);
                     },
                     remove: function remove(i) {
 
@@ -1293,7 +1318,7 @@
          * component's bound element.
          */
 
-        var _loop6 = function _loop6(i) {
+        var _loop3 = function _loop3(i) {
 
             if (typeof _arguments[i] === 'function') {
 
@@ -1306,9 +1331,9 @@
         };
 
         for (var i = 1; i < arguments.length; i++) {
-            var _ret6 = _loop6(i);
+            var _ret3 = _loop3(i);
 
-            if (_ret6 === 'break') break;
+            if (_ret3 === 'break') break;
         }
 
         return vm;

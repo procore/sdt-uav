@@ -214,8 +214,6 @@ export default function model(data) {
                  */
                 if (vm._loops) {
 
-                    vm._loops.forEach(loop => loop.replace(data[key], key));
-
                     /**
                      * uav._pause is used in bind-array-methods.js to prevent
                      * rapid-fire renders during methods like Array.fill(), 
@@ -223,6 +221,8 @@ export default function model(data) {
                      * every index of the array.
                      */
                     if (!uav._pause) {
+
+                        vm._loops.forEach(loop => loop.replace(data[key], key));
 
                         runBindings(vm._uav, 0);
 
