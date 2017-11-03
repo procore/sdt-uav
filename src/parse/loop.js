@@ -108,6 +108,16 @@ export default (attribute, steps, node) => {
 
         list._loops.push(loop);
 
+        /**
+         * Save a closure that will remove this binding,
+         * to be run if the node is removed or replaced.
+         */
+        uav.node._uav.push(function () {
+
+            list._loops.splice(list._loops.indexOf(loop), 1);
+
+        });
+
         list.forEach(loop.add);
 
     };
