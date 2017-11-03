@@ -436,6 +436,8 @@
 
             to._uav = from._uav;
 
+            to._loops = from._loops;
+
             from = null;
         }
     }
@@ -682,6 +684,11 @@
             } catch (err) {
 
                 result = '';
+
+                if (uav.warnings) {
+
+                    console.warn(err, expression);
+                }
             }
 
             return result === undefined || result === null ? '' : result;
