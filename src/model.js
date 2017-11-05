@@ -52,8 +52,6 @@ function copyBindings(from, to) {
 
         to._uav = from._uav;
 
-        to._loops = from._loops;
-
         from = null;
 
     }
