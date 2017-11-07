@@ -924,7 +924,16 @@
         var binding = function binding(el) {
             return function (state) {
 
-                el.value = evaluate(state.vm, state.ctx);
+                if (el.tagName === 'SELECT') {
+
+                    setTimeout(function () {
+
+                        el.value = evaluate(state.vm, state.ctx);
+                    });
+                } else {
+
+                    el.value = evaluate(state.vm, state.ctx);
+                }
             };
         };
 
