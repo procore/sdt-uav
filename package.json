@@ -1,6 +1,6 @@
 {
   "name": "uav",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "description": "Simple is good",
   "main": "dist/uav.js",
   "scripts": {
@@ -22,7 +22,7 @@
     "uav"
   ],
   "author": "unearth",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "bugs": {
     "url": "https://github.com/unearth-inc/uav/issues"
   },
