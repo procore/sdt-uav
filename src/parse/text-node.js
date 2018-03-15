@@ -36,6 +36,8 @@ function bindTextNode(steps, expression) {
             }
 
         } else {
+
+            util.unbind(node);
             
             node.textContent = value;
 

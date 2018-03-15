@@ -1163,6 +1163,8 @@
                     }
                 } else {
 
+                    util.unbind(node);
+
                     node.textContent = value;
                 }
             };
