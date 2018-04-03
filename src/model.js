@@ -11,7 +11,7 @@ import bindArrayMethods from './bind-array-methods';
  */
 function notVmEligible(data) {
 
-    return !data || typeof data !== 'object' || data.tagName || data instanceof RegExp;
+    return !data || typeof data !== 'object' || data.tagName || data instanceof Date || data instanceof RegExp;
 
 }
 
