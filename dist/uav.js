@@ -395,9 +395,9 @@
      * @param  {Object} data - the object to test
      * @return {Boolean}
      */
-    function notVmEligible(data) {
+    function isVmEligible(data) {
 
-        return !data || typeof data !== 'object' || data.tagName || data instanceof Date || data instanceof RegExp;
+        return data && (Object.getPrototypeOf(data) === Object.prototype || Array.isArray(data));
     }
 
     /**
@@ -427,7 +427,7 @@
      */
     function copyBindings(from, to) {
 
-        if (from && from._uav && !notVmEligible(to)) {
+        if (from && from._uav && isVmEligible(to)) {
 
             Object.keys(from).forEach(function (key) {
 
@@ -450,7 +450,7 @@
      */
     function model(data) {
 
-        if (notVmEligible(data) || data._uav) {
+        if (!isVmEligible(data) || data._uav) {
 
             return data;
         }
@@ -790,7 +790,7 @@
                  * Save a closure that will remove this binding,
                  * to be run if the node is removed or replaced.
                  */
-                uav.node._uav.push(function () {
+                el._uav.push(function () {
 
                     list._loops.splice(list._loops.indexOf(loop), 1);
                 });

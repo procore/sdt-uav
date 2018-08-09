@@ -110,8 +110,8 @@ describe('uav', () => {
             <ul u-for="item in list">
                 <li>{item}</li>
             </ul>`, {
-                list: [1, 2, 3]
-            });
+            list: [1, 2, 3]
+        });
 
         const secondItem = component._el.firstElementChild.nextElementSibling;
 
@@ -135,8 +135,8 @@ describe('uav', () => {
                     <span>{i}:{it}</span>
                 </div>
             </div>`, {
-                list: [[0]]
-            });
+            list: [[0]]
+        });
 
         expect(component._el.outerHTML).toBe('<div><div><span>0:0</span></div></div>');
 
@@ -240,8 +240,8 @@ describe('uav', () => {
             <ul u-for="item,index in list">
                 <li>{index}: {item}</li>
             </ul>`, {
-                list: [1]
-            });
+            list: [1]
+        });
 
         const firstItem = component._el.firstElementChild;
 
@@ -263,8 +263,8 @@ describe('uav', () => {
             <ul u-for="item,index in list">
                 <li>{index}: {item}</li>
             </ul>`, {
-                list: [1, 2]
-            });
+            list: [1, 2]
+        });
 
         const firstItem = component._el.firstElementChild;
 
@@ -284,8 +284,8 @@ describe('uav', () => {
             <ul u-for="item,index in list">
                 <li>{index}: {item}</li>
             </ul>`, {
-                list: [1, 2]
-            });
+            list: [1, 2]
+        });
 
         const result = component.list.shift();
 
@@ -301,8 +301,8 @@ describe('uav', () => {
             <ul u-for="item,index in list">
                 <li>{index}: {item}</li>
             </ul>`, {
-                list: [1, 2]
-            });
+            list: [1, 2]
+        });
 
         const result = component.list.splice(0, 1);
 
@@ -318,8 +318,8 @@ describe('uav', () => {
             <ul u-for="item,index in list">
                 <li>{index}: {item}</li>
             </ul>`, {
-                list: [1]
-            });
+            list: [1]
+        });
 
         const result = component.list.splice(1, 0, 2, 3);
 
@@ -339,8 +339,8 @@ describe('uav', () => {
             <ul u-for="item,index in list">
                 <li>{index}: {item}</li>
             </ul>`, {
-                list: [1]
-            });
+            list: [1]
+        });
 
         component.list.unshift(0);
 
@@ -358,8 +358,8 @@ describe('uav', () => {
             <ul u-for="item,index in list">
                 <li>{index}: {item}</li>
             </ul>`, {
-                list: [1, 2]
-            });
+            list: [1, 2]
+        });
 
         component.list.reverse();
 
@@ -373,8 +373,8 @@ describe('uav', () => {
             <ul u-for="item,index in list">
                 <li>{index}: {item}</li>
             </ul>`, {
-                list: [1, 2]
-            });
+            list: [1, 2]
+        });
 
         component.list.sort((a, b) => b - a);
 
@@ -421,8 +421,8 @@ describe('uav', () => {
             <option value="foo"></option>
             <option value="bar"></option>
         </select>`, {
-                value: 'foo'
-            });
+            value: 'foo'
+        });
 
         expect(component._el.value).toBe('foo');
 
@@ -441,8 +441,8 @@ describe('uav', () => {
             <input type="radio" value="foo" u-bind="value"/>
             <input type="radio" value="bar" u-bind="value"/>
         </div>`, {
-                value: 'foo'
-            });
+            value: 'foo'
+        });
 
         expect(component._el.firstElementChild.checked).toBe(true);
 
@@ -477,8 +477,8 @@ describe('uav', () => {
                 <input type="checkbox" value="foo" u-bind="list"/>
                 <input type="checkbox" value="bar" u-bind="list"/>
             </div>`, {
-                list: ['foo']
-            });
+            list: ['foo']
+        });
 
         expect(component._el.firstElementChild.checked).toBe(true);
 
@@ -513,6 +513,52 @@ describe('uav', () => {
         };
 
         expect(component.one.two._uav.three).toBeDefined();
+
+    });
+
+    it('should clean up loop bindings after elements are removed', () => {
+
+        const child = uav.component(`
+            <ul u-for="item,index in list">
+                <li>{index}: {item}</li>
+            </ul>`, {
+            list: [1, 2]
+        });
+
+        const parent = uav.component(`
+        <div>{child}</div>
+        `, {
+            child
+        });
+
+        expect(child.list._loops.length).toBe(1);
+
+        parent.child = null;
+
+        expect(child.list._loops.length).toBe(0);
+
+    });
+
+    it('should clean up bindings after elements are removed', () => {
+
+        const child = uav.component(`
+            <ul u-for="item,index in list">
+                <li>{index}: {item}</li>
+            </ul>`, {
+            list: [1, 2]
+        });
+
+        const parent = uav.component(`
+        <div>{child}</div>
+        `, {
+            child
+        });
+
+        expect(child._uav.list.length).toBe(1);
+
+        parent.child = null;
+
+        expect(child._uav.list.length).toBe(0);
 
     });
 

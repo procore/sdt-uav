@@ -112,7 +112,7 @@ export default (attribute, steps, node) => {
          * Save a closure that will remove this binding,
          * to be run if the node is removed or replaced.
          */
-        uav.node._uav.push(function () {
+        el._uav.push(() => {
 
             list._loops.splice(list._loops.indexOf(loop), 1);
 
