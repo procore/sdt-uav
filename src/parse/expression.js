@@ -1,5 +1,3 @@
-import uav from '../uav';
-
 /**
  * Convert a template expression into a function that
  * can be called with a view model as well as a parent
@@ -28,11 +26,7 @@ export default expression => {
 
             result = '';
 
-            if (uav.warnings) {
-
-                console.warn(err, expression);
-
-            }
+            console.warn(err, expression);
 
         }
 

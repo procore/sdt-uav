@@ -32,7 +32,7 @@ const util = {
 
             node._uav.forEach(fn => fn());
 
-            node = null;
+            node._uav = null;
 
         }
 

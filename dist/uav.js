@@ -74,7 +74,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
           return fn();
         });
 
-        node = null;
+        node._uav = null;
       }
     },
 
@@ -587,10 +587,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         result = evaluator(vm, ctx || {});
       } catch (err) {
         result = '';
-
-        if (uav.warnings) {
-          console.warn(err, expression);
-        }
+        console.warn(err, expression);
       }
 
       return result === undefined || result === null ? '' : result;
@@ -778,13 +775,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   function bindInput(steps, evaluate) {
     var binding = function binding(el) {
       return function (state) {
-        if (el.tagName === 'SELECT') {
-          setTimeout(function () {
-            el.value = evaluate(state.vm, state.ctx);
-          });
-        } else {
-          el.value = evaluate(state.vm, state.ctx);
-        }
+        el.value = evaluate(state.vm, state.ctx);
       };
     };
 
@@ -1043,7 +1034,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       parseAttribute(attribute, steps, node);
     });
 
-    if (node.value) {
+    if (node.value && node.tagName !== 'OPTION') {
       parseAttribute({
         name: 'value',
         value: node.value

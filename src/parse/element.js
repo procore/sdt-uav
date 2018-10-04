@@ -22,7 +22,7 @@ function parseElement(node) {
 
     });
 
-    if (node.value) {
+    if (node.value && node.tagName !== 'OPTION') {
 
         parseAttribute({
             name: 'value',
