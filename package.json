@@ -1,0 +1,42 @@
+{
+  "name": "uav",
+  "version": "2.0.13",
+  "description": "Simple is good",
+  "main": "dist/uav.js",
+  "scripts": {
+    "watch": "rollup src/index.js -o dist/uav.js -w -f iife",
+    "build": ". build.sh",
+    "test": "karma start"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/unearth-inc/uav.git"
+  },
+  "keywords": [
+    "data",
+    "binding",
+    "template",
+    "view",
+    "spa",
+    "framework",
+    "uav"
+  ],
+  "author": "unearth",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/unearth-inc/uav/issues"
+  },
+  "homepage": "https://github.com/unearth-inc/uav#readme",
+  "devDependencies": {
+    "@babel/cli": "^7.0.0",
+    "@babel/core": "^7.0.0",
+    "@babel/preset-env": "^7.0.0",
+    "jasmine-core": "^2.8.0",
+    "karma": "^3.0.0",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-jasmine": "^1.1.0",
+    "rollup": "^0.50.0",
+    "uglify-js": "^3.1.0"
+  },
+  "dependencies": {}
+}

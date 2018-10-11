@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head>
+    <title>uav | simple is good.</title>
+</head>
+<body>
+<div id="app"></div>
+<script src="dist/uav.js"></script>
+<script>
+window.vm = window.uav.component(`
+<div>
+    <select u-bind="value" u-for="opt in opts">
+        <option u-value="{opt}">{opt}</option>
+    </select>
+</div>`, {
+    value: 1,
+    opts: ['1', '2', '3', '4']
+}, '#app');
+
+</script>
+</body>
+</html>
