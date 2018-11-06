@@ -146,7 +146,11 @@ export default function model(data) {
 
                 vm._uav[key] = vm._uav[key] || [];
 
-                vm._uav[key].push(state);
+                if (vm._uav[key].indexOf(state) === -1) {
+
+                    vm._uav[key].push(state);
+
+                }
 
                 /**
                  * Save a closure that will remove this binding,

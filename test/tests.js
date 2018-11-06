@@ -562,4 +562,17 @@ describe('uav', () => {
 
     });
 
+    it('should de-dupe bindings to the same property', () => {
+
+        const component = uav.component('<div u-class="{getKlass(items[0])}"></div>', {
+            items: [{
+                klass: 'foo'
+            }],
+            getKlass: item => item.klass && item.klass
+        });
+
+        expect(component.items[0]._uav.klass.length).toBe(1);
+
+    });
+
 });

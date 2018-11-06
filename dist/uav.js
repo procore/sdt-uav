@@ -446,7 +446,9 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
           var state = uav.state;
           vm._uav[key] = vm._uav[key] || [];
 
-          vm._uav[key].push(state);
+          if (vm._uav[key].indexOf(state) === -1) {
+            vm._uav[key].push(state);
+          }
           /**
            * Save a closure that will remove this binding,
            * to be run if the node is removed or replaced.
