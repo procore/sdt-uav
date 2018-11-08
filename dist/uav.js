@@ -325,7 +325,11 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
 
   function isVmEligible(data) {
-    return data && (Object.getPrototypeOf(data) === Object.prototype || Array.isArray(data));
+    try {
+      return data && (Object.getPrototypeOf(data) === Object.prototype || Array.isArray(data));
+    } catch (e) {
+      return;
+    }
   }
   /**
    * Run any bindings for the given model property.

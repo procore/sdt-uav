@@ -11,7 +11,15 @@ import bindArrayMethods from './bind-array-methods';
  */
 function isVmEligible(data) {
 
-    return data && (Object.getPrototypeOf(data) === Object.prototype || Array.isArray(data));
+    try {
+
+        return data && (Object.getPrototypeOf(data) === Object.prototype || Array.isArray(data));
+
+    } catch (e) {
+
+        return;
+
+    }
 
 }
 
