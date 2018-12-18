@@ -781,7 +781,12 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   function bindInput(steps, evaluate) {
     var binding = function binding(el) {
       return function (state) {
+        var pos = el.selectionStart;
         el.value = evaluate(state.vm, state.ctx);
+
+        if (el.setSelectionRange) {
+          el.setSelectionRange(pos, pos);
+        }
       };
     };
 

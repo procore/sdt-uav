@@ -130,7 +130,15 @@ function bindInput(steps, evaluate) {
 
     const binding = el => state => {
 
+        const pos = el.selectionStart;
+
         el.value = evaluate(state.vm, state.ctx);
+
+        if (el.setSelectionRange) {
+
+            el.setSelectionRange(pos, pos);
+
+        }
 
     };
 
