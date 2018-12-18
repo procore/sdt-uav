@@ -134,9 +134,13 @@ function bindInput(steps, evaluate) {
 
         el.value = evaluate(state.vm, state.ctx);
 
-        if (el.setSelectionRange) {
+        try {
 
             el.setSelectionRange(pos, pos);
+
+        } catch (e) {
+
+            // element does not support selection
 
         }
 

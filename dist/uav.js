@@ -784,8 +784,9 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         var pos = el.selectionStart;
         el.value = evaluate(state.vm, state.ctx);
 
-        if (el.setSelectionRange) {
+        try {
           el.setSelectionRange(pos, pos);
+        } catch (e) {// element does not support selection
         }
       };
     };
