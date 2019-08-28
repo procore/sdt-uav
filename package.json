@@ -28,11 +28,11 @@
   },
   "homepage": "https://github.com/unearth-inc/uav#readme",
   "devDependencies": {
-    "@babel/cli": "^7.0.0",
+    "@babel/cli": "7.5.5",
     "@babel/core": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
     "jasmine-core": "^2.8.0",
-    "karma": "^3.0.0",
+    "karma": "4.3.0",
     "karma-chrome-launcher": "^2.2.0",
     "karma-jasmine": "^1.1.0",
     "rollup": "^0.50.0",
