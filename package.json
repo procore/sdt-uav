@@ -33,7 +33,7 @@
     "@babel/preset-env": "7.5.5",
     "browserslist": "4.16.5",
     "engine.io": "4.1.2",
-    "follow-redirects": "1.14.7",
+    "follow-redirects": "1.14.8",
     "glob-parent": "5.1.2",
     "jasmine-core": "^3.6.0",
     "karma": "6.1.1",
