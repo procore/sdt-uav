@@ -35,7 +35,7 @@
     "engine.io": "4.1.2",
     "follow-redirects": "1.14.9",
     "glob-parent": "5.1.2",
-    "jasmine-core": "^3.6.0",
+    "jasmine-core": "^4.0.1",
     "karma": "6.3.17",
     "karma-chrome-launcher": "^3.1.0",
     "karma-jasmine": "^1.1.0",
