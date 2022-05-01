@@ -39,7 +39,7 @@
     "karma": "6.3.17",
     "karma-chrome-launcher": "^3.1.0",
     "karma-jasmine": "^4.0.2",
-    "rollup": "^0.50.0",
+    "rollup": "^2.71.1",
       "path-parse": "1.0.7",
     "uglify-js": "^3.1.0",
     "ws": "8.2.1"
