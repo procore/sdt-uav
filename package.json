@@ -38,7 +38,7 @@
     "jasmine-core": "^4.0.1",
     "karma": "6.4.0",
     "karma-chrome-launcher": "^3.1.0",
-    "karma-jasmine": "^4.0.2",
+    "karma-jasmine": "^5.1.0",
     "rollup": "^2.75.5",
       "path-parse": "1.0.7",
     "uglify-js": "^3.1.0",
