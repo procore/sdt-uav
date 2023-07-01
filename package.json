@@ -28,7 +28,7 @@
   },
   "homepage": "https://github.com/unearth-inc/uav#readme",
   "devDependencies": {
-    "@babel/cli": "7.20.7",
+    "@babel/cli": "7.22.5",
     "@babel/core": "7.21.4",
     "@babel/preset-env": "7.21.4",
     "browserslist": "4.21.5",
