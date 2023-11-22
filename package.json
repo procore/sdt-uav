@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/unearth-inc/uav.git"
+    "url": "git+https://github.com/procore/sdt-uav.git"
   },
   "keywords": [
     "data",
@@ -24,9 +24,9 @@
   "author": "unearth",
   "license": "UNLICENSED",
   "bugs": {
-    "url": "https://github.com/unearth-inc/uav/issues"
+    "url": "https://github.com/procore/sdt-uav/issues"
   },
-  "homepage": "https://github.com/unearth-inc/uav#readme",
+  "homepage": "https://github.com/procore/sdt-uav#readme",
   "devDependencies": {
     "@babel/cli": "7.22.5",
     "@babel/core": "7.22.5",
