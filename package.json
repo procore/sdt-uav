@@ -26,16 +26,5 @@
   "bugs": {
     "url": "https://github.com/procore/sdt-uav/issues"
   },
-  "homepage": "https://github.com/procore/sdt-uav#readme",
-  "devDependencies": {
-    "@babel/cli": "7.24.1",
-    "@babel/core": "7.24.4",
-    "@babel/preset-env": "7.21.4",
-    "jasmine-core": "^4.0.1",
-    "karma": "6.4.3",
-    "karma-chrome-launcher": "^3.1.0",
-    "karma-jasmine": "^5.1.0",
-    "rollup": "^3.5.1",
-    "uglify-js": "^3.1.0"
-  }
+  "homepage": "https://github.com/procore/sdt-uav#readme"
 }

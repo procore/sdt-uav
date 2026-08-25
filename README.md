@@ -4,6 +4,15 @@
 * It's simple. The syntax is minimal; there are no dependencies or required toolchains.
 * It's small. Less than 3KB gzipped.
 
+## Maintenance status
+
+This library is stable and no longer under active development. The `dist/`
+build is checked into the repo, so `devDependencies` (Babel, Rollup, Karma,
+etc.) have been removed to stop recurring Dependabot vulnerability alerts on
+unused build/test tooling — none of it ships in the published package. To
+rebuild or run tests, restore the `devDependencies` block from git history
+(see the commit that removed it) and run `npm install`.
+
 Table of contents:
 
 * [Hello World](#hello-world)
