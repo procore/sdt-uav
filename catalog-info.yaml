@@ -1,0 +1,18 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: sdt-uav
+  description: Lightweight JavaScript view library for data-bound templates.
+  title: SDT UAV
+  tags:
+    - javascript
+  annotations:
+    github.com/project-slug: procore/sdt-uav
+    github.com/team-slug: procore/team-maps
+spec:
+  type: library
+  lifecycle: ga
+  owner: team-maps
+  domain: spatial-data
+  system: maps
